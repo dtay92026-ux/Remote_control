@@ -8,7 +8,6 @@ app = Flask(__name__)
 STATE_FILE = "bridge_state.json"
 
 default_state = {
-    "pair": "DTAY89",
     "command": "PAUSE",
     "symbol": "XAUUSD",
     "timeframe": "M15",
@@ -112,8 +111,12 @@ HTML_TEMPLATE = """
                     <span id="log-command" class="text-zinc-200 font-bold">PAUSE</span>
                 </div>
                 <div class="flex justify-between">
+                    <span class="text-zinc-500">Active Symbol:</span>
+                    <span id="log-symbol" class="text-emerald-400 font-bold">XAUUSD</span>
+                </div>
+                <div class="flex justify-between">
                     <span class="text-zinc-500">Active Strategy:</span>
-                    <span id="log-strategy" class="text-emerald-400 truncate max-w-[180px]">PURE_EXECUTION</span>
+                    <span id="log-strategy" class="text-zinc-300 truncate max-w-[160px]">PURE_EXECUTION</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-zinc-500">Timeframe:</span>
@@ -146,10 +149,10 @@ HTML_TEMPLATE = """
             </div>
 
             <div class="space-y-3 font-sans text-xs">
-                <!-- PAIR INPUT ADDED HERE -->
+                <!-- FREE-FORM TRADING SYMBOL TEXT INPUT -->
                 <div>
-                    <label class="block text-[11px] text-zinc-400 mb-1 font-mono">Pair Code</label>
-                    <input type="text" id="pair" value="{{ state.pair }}" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
+                    <label class="block text-[11px] text-zinc-400 mb-1 font-mono">Trading Symbol (Type custom pair)</label>
+                    <input type="text" id="symbol" value="{{ state.symbol }}" placeholder="e.g. XAUUSD, EURUSD" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-emerald-400 focus:outline-none focus:border-emerald-500 font-mono uppercase">
                 </div>
 
                 <div>
@@ -213,7 +216,7 @@ HTML_TEMPLATE = """
         let currentCommand = "{{ state.command }}";
         let lastUserActionTime = 0;
 
-        document.getElementById('pair').value = "{{ state.pair }}";
+        document.getElementById('symbol').value = "{{ state.symbol }}";
         document.getElementById('strategy').value = "{{ state.strategy }}";
         document.getElementById('timeframe').value = "{{ state.timeframe }}";
         document.getElementById('tpEnabled').value = "{{ 'true' if state.tpEnabled else 'false' }}";
@@ -275,6 +278,7 @@ HTML_TEMPLATE = """
                 }
 
                 document.getElementById('log-time').innerText = data.ea.lastSeen || '--:--:--';
+                document.getElementById('log-symbol').innerText = data.state.symbol || 'XAUUSD';
                 document.getElementById('log-strategy').innerText = data.ea.strategy || data.state.strategy;
                 document.getElementById('log-timeframe').innerText = data.state.timeframe || 'M15';
                 
@@ -298,8 +302,8 @@ HTML_TEMPLATE = """
 
         function sendCommand(cmd) {
             const data = {
-                pair: document.getElementById('pair').value,
                 command: cmd,
+                symbol: document.getElementById('symbol').value.toUpperCase(),
                 strategy: document.getElementById('strategy').value,
                 timeframe: document.getElementById('timeframe').value,
                 lotSize: parseFloat(document.getElementById('lotSize').value),
@@ -374,8 +378,8 @@ def update_control():
     return jsonify({"error": "No data provided"}), 400
 
   for key in [
-      "pair",
       "command",
+      "symbol",
       "timeframe",
       "strategy",
       "lotSize",
