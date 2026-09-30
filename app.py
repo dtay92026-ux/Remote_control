@@ -7,6 +7,28 @@ app = Flask(__name__)
 
 STATE_FILE = "bridge_state.json"
 
+# 18 Advanced Strategies with Optimal Timeframes
+STRATEGIES = {
+    "PURE_EXECUTION": {"name": "Pure Execution (Manual/Custom)", "timeframe": "M15"},
+    "THREE_STEP_SCALPER": {"name": "3-Step Amapiano Scalper", "timeframe": "M1"},
+    "SGIJA_BOUNCE": {"name": "Sgija Momentum Scalper", "timeframe": "M1"},
+    "PRIVATE_SCHOOL_TREND": {"name": "Private School Trend Following", "timeframe": "H1"},
+    "SUPPORT_RESISTANCE": {"name": "Support & Resistance Rejection", "timeframe": "M15"},
+    "MA_CROSSOVER": {"name": "Moving Average Crossover (Fast)", "timeframe": "M30"},
+    "BOLLINGER_SQUEEZE": {"name": "Bollinger Band Squeeze Breakout", "timeframe": "M5"},
+    "RSI_REVERSAL": {"name": "RSI Overbought/Oversold Reversal", "timeframe": "M15"},
+    "MACD_MOMENTUM": {"name": "MACD Histogram Momentum", "timeframe": "M15"},
+    "EMA_RIBBON_SCALP": {"name": "EMA Ribbon Scalper", "timeframe": "M1"},
+    "LONDON_BREAKOUT": {"name": "London Open Session Breakout", "timeframe": "M5"},
+    "NEW_YORK_MOMENTUM": {"name": "New York Session Momentum", "timeframe": "M15"},
+    "ASIAN_RANGE": {"name": "Asian Range Box Breakout", "timeframe": "M15"},
+    "FIBONACCI_PULLBACK": {"name": "Fibonacci 61.8% Retracement", "timeframe": "H1"},
+    "VWAP_BOUNCE": {"name": "VWAP Institutional Bounce", "timeframe": "M5"},
+    "SUPERTREND_FOLLOW": {"name": "Supertrend Directional Follow", "timeframe": "H1"},
+    "STOCHASTIC_SCALP": {"name": "Stochastic Fast Scalper", "timeframe": "M1"},
+    "PINBAR_REVERSAL": {"name": "Price Action Pinbar Reversal", "timeframe": "M30"},
+}
+
 default_state = {
     "command": "PAUSE",
     "symbol": "XAUUSD",
@@ -57,7 +79,7 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D'TAY89 | Subscription-Free Control Panel</title>
+    <title>D'TAY89 | Advanced Strategy Control Panel</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans p-4">
@@ -67,7 +89,7 @@ HTML_TEMPLATE = """
         <div class="flex justify-between items-center border-b border-slate-800 pb-4">
             <div>
                 <h1 class="text-xl font-bold text-emerald-400 tracking-wider">D'TAY89 EXECUTOR</h1>
-                <p class="text-xs text-slate-400">Subscription-Free iTradebot Alternative</p>
+                <p class="text-xs text-slate-400">18-Strategy Automated Bridge</p>
             </div>
             <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">
                 OFFLINE
@@ -76,7 +98,7 @@ HTML_TEMPLATE = """
 
         <!-- Master Automation Control (Play / Pause) -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-3">
-            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Automation State</h2>
+            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Master Automation</h2>
             <div class="grid grid-cols-2 gap-3">
                 <button onclick="sendCommand('PLAY')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-lg transition shadow-md active:scale-95 flex items-center justify-center space-x-2">
                     <span>▶ PLAY</span>
@@ -87,18 +109,17 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- Strategy & Execution Settings Form -->
+        <!-- Strategy & Parameters Form -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-4">
-            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Strategy & Parameters</h2>
+            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Strategy & Timeframe</h2>
             
             <div class="space-y-3">
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Active Strategy</label>
-                    <select id="strategy" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                        <option value="PURE_EXECUTION" {% if state.strategy == 'PURE_EXECUTION' %}selected{% endif %}>Pure Execution (Automated)</option>
-                        <option value="SUPPORT_RESISTANCE" {% if state.strategy == 'SUPPORT_RESISTANCE' %}selected{% endif %}>Support & Resistance Rejection</option>
-                        <option value="TREND_FOLLOWING" {% if state.strategy == 'TREND_FOLLOWING' %}selected{% endif %}>Trend Following Momentum</option>
-                        <option value="PULLBACK" {% if state.strategy == 'PULLBACK' %}selected{% endif %}>Price Zone Pullback</option>
+                    <label class="block text-xs text-slate-400 mb-1">Select Strategy (Auto-Timeframe Enabled)</label>
+                    <select id="strategy" onchange="updateRecommendedTimeframe()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        {% for key, val in strategies.items() %}
+                        <option value="{{ key }}" {% if state.strategy == key %}selected{% endif %}>{{ val.name }} ({{ val.timeframe }})</option>
+                        {% endfor %}
                     </select>
                 </div>
 
@@ -144,7 +165,7 @@ HTML_TEMPLATE = """
                 </div>
 
                 <button onclick="saveConfig()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-lg transition text-sm">
-                    Update Configuration
+                    Update Strategy & Config
                 </button>
             </div>
         </div>
@@ -157,18 +178,31 @@ HTML_TEMPLATE = """
                 <span id="ea-last-seen" class="text-slate-200 font-mono">{{ ea.lastSeen }}</span>
             </div>
             <div class="flex justify-between py-1 border-b border-slate-800">
-                <span class="text-slate-400">Chart Timeframe:</span>
-                <span id="ea-timeframe" class="text-slate-200 font-mono">{{ ea.timeframe }}</span>
+                <span class="text-slate-400">Active Strategy:</span>
+                <span id="ea-strategy" class="text-emerald-400 font-mono">{{ ea.strategy }}</span>
             </div>
             <div class="flex justify-between py-1 border-b border-slate-800">
                 <span class="text-slate-400">Last Executed:</span>
-                <span id="ea-last-executed" class="text-emerald-400 font-mono">{{ ea.lastExecuted }}</span>
+                <span id="ea-last-executed" class="text-slate-200 font-mono">{{ ea.lastExecuted }}</span>
             </div>
         </div>
 
     </div>
 
     <script>
+        const strategyTimeframes = {
+            {% for key, val in strategies.items() %}
+            "{{ key }}": "{{ val.timeframe }}",
+            {% endfor %}
+        };
+
+        function updateRecommendedTimeframe() {
+            const strat = document.getElementById('strategy').value;
+            if (strategyTimeframes[strat]) {
+                document.getElementById('timeframe').value = strategyTimeframes[strat];
+            }
+        }
+
         setInterval(() => {
             fetch('/api/status')
             .then(res => res.json())
@@ -182,7 +216,7 @@ HTML_TEMPLATE = """
                     badge.innerText = "OFFLINE";
                 }
                 document.getElementById('ea-last-seen').innerText = data.ea.lastSeen;
-                document.getElementById('ea-timeframe').innerText = data.ea.timeframe || 'M15';
+                document.getElementById('ea-strategy').innerText = data.ea.strategy || 'PURE_EXECUTION';
                 document.getElementById('ea-last-executed').innerText = data.ea.lastExecuted || 'None';
             }).catch(err => console.error("Telemetry sync error:", err));
         }, 2000);
@@ -222,7 +256,9 @@ HTML_TEMPLATE = """
 @app.route("/")
 def index():
   state = load_state()
-  return render_template_string(HTML_TEMPLATE, state=state, ea=ea_heartbeat)
+  return render_template_string(
+      HTML_TEMPLATE, state=state, ea=ea_heartbeat, strategies=STRATEGIES
+  )
 
 
 @app.route("/api/bridge/command", methods=["GET"])
@@ -275,4 +311,4 @@ def update_control():
 
 
 if __name__ == "__main__":
-  app.run(host="0.0.0.0", port5000)
+  app.run(host="0.0.0.0", port=5000)
