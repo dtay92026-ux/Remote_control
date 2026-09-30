@@ -93,23 +93,16 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- Larger Custom Robot Head Logo Circle with Fallback -->
+        <!-- Custom Glowing Circle with D'TAY89 Typography -->
         <div class="flex flex-col items-center justify-center pt-2 pb-1 space-y-3">
             <div class="relative w-40 h-40 rounded-full bg-zinc-950 border-2 border-emerald-500/60 flex items-center justify-center shadow-[0_0_35px_rgba(16,185,129,0.35)] overflow-hidden">
-                <img src="/static/logo.png" alt="Neural Bot" class="w-full h-full object-cover object-[center_32%] scale-125" onerror="this.style.display='none'; document.getElementById('fallback-robot').style.display='flex';">
-                
-                <div id="fallback-robot" style="display:none;" class="absolute inset-0 bg-zinc-950 flex items-center justify-center">
-                    <svg class="w-20 h-20 text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M4.5 9h15M6 9l1.5 9h9L18 9M9 13h1m4 0h1m-7 3h6" />
-                        <circle cx="10" cy="11" r="1" fill="currentColor"/>
-                        <circle cx="14" cy="11" r="1" fill="currentColor"/>
-                    </svg>
-                </div>
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.1)_0%,transparent_70%)]"></div>
+                <span class="text-xl font-black tracking-widest text-emerald-400 font-mono drop-shadow-[0_0_12px_rgba(52,211,153,0.8)]">D'TAY89</span>
             </div>
-            <h1 class="text-lg font-black tracking-widest text-emerald-400 uppercase">D'TAY89 NEURAL EA</h1>
+            <h1 class="text-lg font-black tracking-widest text-emerald-400 uppercase">NEURAL EA</h1>
         </div>
 
-        <!-- Quick Status Grid Panel -->
+        <!-- Quick Status Grid Panel (Synced with Inputs) -->
         <div class="grid grid-cols-3 gap-2 bg-zinc-950 border border-zinc-900 rounded-2xl p-3 text-center shadow-lg">
             <div>
                 <span class="block text-[10px] text-zinc-500 uppercase">Symbol</span>
@@ -121,7 +114,7 @@ HTML_TEMPLATE = """
             </div>
             <div>
                 <span class="block text-[10px] text-zinc-500 uppercase">Trades</span>
-                <span class="text-xs font-bold text-zinc-200 font-mono">{{ state.maxTrades }}</span>
+                <span id="stat-max-trades" class="text-xs font-bold text-zinc-200 font-mono">{{ state.maxTrades }}</span>
             </div>
         </div>
 
@@ -221,7 +214,7 @@ HTML_TEMPLATE = """
 
     <script>
         let currentCommand = "{{ state.command }}";
-        let lastUserActionTime = 0; // Lock sync updates briefly to prevent race-condition snaps
+        let lastUserActionTime = 0;
 
         function updateButtonUI(cmd) {
             const iconPlay = document.getElementById('icon-play');
@@ -244,7 +237,7 @@ HTML_TEMPLATE = """
 
         function toggleEngine() {
             const nextCmd = (currentCommand === 'PLAY') ? 'PAUSE' : 'PLAY';
-            lastUserActionTime = Date.now(); // Lock polling overrides for 3 seconds
+            lastUserActionTime = Date.now();
             updateButtonUI(nextCmd);
             sendCommand(nextCmd);
         }
@@ -263,7 +256,6 @@ HTML_TEMPLATE = """
         }
 
         setInterval(() => {
-            // Skip status override if user recently clicked the button manually
             if (Date.now() - lastUserActionTime < 3000) return;
 
             fetch('/api/status')
@@ -280,7 +272,9 @@ HTML_TEMPLATE = """
                 document.getElementById('ea-last-seen').innerText = data.ea.lastSeen;
                 document.getElementById('ea-strategy').innerText = data.ea.strategy || 'PURE_EXECUTION';
                 document.getElementById('ea-last-executed').innerText = data.ea.lastExecuted || 'None';
+                
                 document.getElementById('stat-symbol').innerText = data.state.symbol || 'XAUUSD';
+                document.getElementById('stat-max-trades').innerText = data.state.maxTrades || 1;
                 
                 if (data.state.command && data.state.command !== currentCommand) {
                     updateButtonUI(data.state.command);
@@ -289,13 +283,19 @@ HTML_TEMPLATE = """
         }, 2000);
 
         function sendCommand(cmd) {
+            const sym = document.getElementById('symbol').value.toUpperCase();
+            const maxT = document.getElementById('maxTrades').value;
+
+            document.getElementById('stat-symbol').innerText = sym;
+            document.getElementById('stat-max-trades').innerText = maxT;
+
             const data = {
                 command: cmd,
                 strategy: document.getElementById('strategy').value,
-                symbol: document.getElementById('symbol').value.toUpperCase(),
+                symbol: sym,
                 timeframe: document.getElementById('timeframe').value,
                 lotSize: parseFloat(document.getElementById('lotSize').value),
-                maxTrades: parseInt(document.getElementById('maxTrades').value),
+                maxTrades: parseInt(maxT),
                 stopLoss: parseFloat(document.getElementById('stopLoss').value),
                 account: document.getElementById('account').value
             };
@@ -311,7 +311,8 @@ HTML_TEMPLATE = """
             });
         }
 
-    function saveConfig() {
+        function saveConfig() {
+            lastUserActionTime = Date.now();
             sendCommand(currentCommand);
         }
     </script>
