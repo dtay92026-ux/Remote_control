@@ -116,7 +116,7 @@ HTML_TEMPLATE = """
                 </div>
                 <div class="flex justify-between">
                     <span class="text-zinc-500">Active Strategy:</span>
-                    <span id="log-strategy" class="text-zinc-300 truncate max-w-[160px]">PURE_EXECUTION</span>
+                    <span id="log-strategy" class="text-emerald-400 truncate max-w-[160px]">PURE_EXECUTION</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-zinc-500">Timeframe:</span>
@@ -149,7 +149,6 @@ HTML_TEMPLATE = """
             </div>
 
             <div class="space-y-3 font-sans text-xs">
-                <!-- FREE-FORM TRADING SYMBOL TEXT INPUT -->
                 <div>
                     <label class="block text-[11px] text-zinc-400 mb-1 font-mono">Trading Symbol (Type custom pair)</label>
                     <input type="text" id="symbol" value="{{ state.symbol }}" placeholder="e.g. XAUUSD, EURUSD" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-emerald-400 focus:outline-none focus:border-emerald-500 font-mono uppercase">
@@ -279,7 +278,7 @@ HTML_TEMPLATE = """
 
                 document.getElementById('log-time').innerText = data.ea.lastSeen || '--:--:--';
                 document.getElementById('log-symbol').innerText = data.state.symbol || 'XAUUSD';
-                document.getElementById('log-strategy').innerText = data.ea.strategy || data.state.strategy;
+                document.getElementById('log-strategy').innerText = data.state.strategy || 'PURE_EXECUTION';
                 document.getElementById('log-timeframe').innerText = data.state.timeframe || 'M15';
                 
                 const executedLog = document.getElementById('log-executed');
@@ -311,6 +310,10 @@ HTML_TEMPLATE = """
                 tpEnabled: document.getElementById('tpEnabled').value === 'true',
                 tp1: parseFloat(document.getElementById('tp1').value)
             };
+
+            // Instantly update UI log fields
+            document.getElementById('log-symbol').innerText = data.symbol;
+            document.getElementById('log-strategy').innerText = data.strategy;
 
             fetch('/api/control', {
                 method: 'POST',
