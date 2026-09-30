@@ -7,16 +7,8 @@ app = Flask(__name__)
 
 STATE_FILE = "bridge_state.json"
 
-STRATEGIES = {
-    "PURE_EXECUTION": "Pure Price Action Rejection & Engulfing",
-    "SUPPORT_RESISTANCE": "Support & Resistance Zone Reversal",
-    "EMA_CROSSOVER": "Exponential Moving Average Trend Crossover",
-    "RSI_EXTREME": "Relative Strength Index Mean Reversion",
-    "MACD_MOMENTUM": "MACD Momentum Breakout",
-    "ATR_BREAKOUT": "Average True Range Volatility Breakout",
-}
-
 default_state = {
+    "pair": "DTAY89",
     "command": "PAUSE",
     "symbol": "XAUUSD",
     "timeframe": "M15",
@@ -154,6 +146,12 @@ HTML_TEMPLATE = """
             </div>
 
             <div class="space-y-3 font-sans text-xs">
+                <!-- PAIR INPUT ADDED HERE -->
+                <div>
+                    <label class="block text-[11px] text-zinc-400 mb-1 font-mono">Pair Code</label>
+                    <input type="text" id="pair" value="{{ state.pair }}" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
+                </div>
+
                 <div>
                     <label class="block text-[11px] text-zinc-400 mb-1 font-mono">Strategy Matrix</label>
                     <select id="strategy" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
@@ -215,6 +213,7 @@ HTML_TEMPLATE = """
         let currentCommand = "{{ state.command }}";
         let lastUserActionTime = 0;
 
+        document.getElementById('pair').value = "{{ state.pair }}";
         document.getElementById('strategy').value = "{{ state.strategy }}";
         document.getElementById('timeframe').value = "{{ state.timeframe }}";
         document.getElementById('tpEnabled').value = "{{ 'true' if state.tpEnabled else 'false' }}";
@@ -299,6 +298,7 @@ HTML_TEMPLATE = """
 
         function sendCommand(cmd) {
             const data = {
+                pair: document.getElementById('pair').value,
                 command: cmd,
                 strategy: document.getElementById('strategy').value,
                 timeframe: document.getElementById('timeframe').value,
@@ -374,6 +374,7 @@ def update_control():
     return jsonify({"error": "No data provided"}), 400
 
   for key in [
+      "pair",
       "command",
       "timeframe",
       "strategy",
