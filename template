@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D'TAY89 | Subscription-Free Control Panel</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans p-4">
+    <div class="max-w-md mx-auto space-y-6">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center border-b border-slate-800 pb-4">
+            <div>
+                <h1 class="text-xl font-bold text-emerald-400 tracking-wider">D'TAY89 EXECUTOR</h1>
+                <p class="text-xs text-slate-400">Subscription-Free iTradebot Alternative</p>
+            </div>
+            <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+                OFFLINE
+            </div>
+        </div>
+
+        <!-- Master Automation Control -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-3">
+            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Master Control</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="sendCommand('START')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-lg transition shadow-md active:scale-95">
+                    START AUTO
+                </button>
+                <button onclick="sendCommand('STOP')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-lg transition shadow-md active:scale-95">
+                    STOP AUTO
+                </button>
+            </div>
+        </div>
+
+        <!-- Strategy & Execution Settings Form -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-4">
+            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Strategy & Parameters</h2>
+            
+            <div class="space-y-3">
+                <!-- Strategy Selector -->
+                <div>
+                    <label class="block text-xs text-slate-400 mb-1">Active Strategy</label>
+                    <select id="strategy" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <option value="PURE_EXECUTION">Pure Execution (No Rules)</option>
+                        <option value="SUPPORT_RESISTANCE">Support & Resistance Rejection</option>
+                        <option value="TREND_FOLLOWING">Trend Following Momentum</option>
+                        <option value="PULLBACK">Price Zone Pullback</option>
+                    </select>
+                </div>
+
+                <!-- Pair / Symbol -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Symbol / Pair</label>
+                        <input type="text" id="symbol" value="{{ state.symbol }}" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 uppercase">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Account Mode</label>
+                        <select id="account" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                            <option value="DEMO">DEMO</option>
+                            <option value="LIVE">LIVE</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Lot Size & Max Trades -->
+                <div class="grid grid-cols-3 gap-3">
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Lot Size</label>
+                        <input type="number" step="0.01" id="lotSize" value="{{ state.lotSize }}" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Max Trades</label>
+                        <input type="number" id="maxTrades" value="{{ state.maxTrades }}" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-400 mb-1">Stop Loss (Pts)</label>
+                        <input type="number" id="stopLoss" value="{{ state.stopLoss }}" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <button onclick="saveConfig()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-lg transition text-sm">
+                    Update Configuration
+                </button>
+            </div>
+        </div>
+
+        <!-- Manual Instant Trigger Buttons -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-3">
+            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Instant Triggers</h2>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="sendManualCommand('BUY')" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2.5 px-4 rounded-lg transition text-sm">
+                    INSTANT BUY
+                </button>
+                <button onclick="sendManualCommand('SELL')" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-lg transition text-sm">
+                    INSTANT SELL
+                </button>
+            </div>
+        </div>
+
+        <!-- EA Live Status Telemetry -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-2 text-xs">
+            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-2">EA Telemetry</h2>
+            <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Last Seen:</span>
+                <span id="ea-last-seen" class="text-slate-200 font-mono">{{ ea.lastSeen }}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Chart Timeframe:</span>
+                <span id="ea-timeframe" class="text-slate-200 font-mono">{{ ea.timeframe }}</span>
+            </div>
+            <div class="flex justify-between py-1 border-b border-slate-800">
+                <span class="text-slate-400">Last Executed:</span>
+                <span id="ea-last-executed" class="text-emerald-400 font-mono">{{ ea.lastExecuted }}</span>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function sendCommand(cmd) {
+            const data = {
+                command: cmd,
+                strategy: document.getElementById('strategy').value,
+                symbol: document.getElementById('symbol').value.toUpperCase(),
+                lotSize: parseFloat(document.getElementById('lotSize').value),
+                maxTrades: parseInt(document.getElementById('maxTrades').value),
+                stopLoss: parseFloat(document.getElementById('stopLoss').value),
+                account: document.getElementById('account').value
+            };
+
+            fetch('/api/control', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(res => res.json())
+            .then(response => {
+                alert("Command sent: " + cmd);
+            });
+        }
+
+        function saveConfig() {
+            sendCommand('CONFIG');
+        }
+
+        function sendManualCommand(cmd) {
+            if(confirm("Are you sure you want to trigger a manual " + cmd + "?")) {
+                sendCommand(cmd);
+            }
+        }
+    </script>
+</body>
+</html>
