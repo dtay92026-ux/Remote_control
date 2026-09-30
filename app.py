@@ -93,15 +93,10 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- Glowing Robot Head Logo Centerpiece -->
+        <!-- Larger Custom Robot Head Logo Centerpiece (Text Cropped Out) -->
         <div class="flex flex-col items-center justify-center pt-2 pb-1 space-y-3">
-            <div class="relative w-28 h-28 rounded-full bg-zinc-950 border border-emerald-500/40 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.25)]">
-                <!-- Cyberpunk Glowing Green Robot Head SVG -->
-                <svg class="w-16 h-16 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M4.5 9h15M6 9l1.5 9h9L18 9M9 13h1m4 0h1m-7 3h6" />
-                    <circle cx="10" cy="11" r="1" fill="currentColor"/>
-                    <circle cx="14" cy="11" r="1" fill="currentColor"/>
-                </svg>
+            <div class="relative w-36 h-36 rounded-full bg-zinc-950 border-2 border-emerald-500/50 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.3)] overflow-hidden">
+                <img src="/static/logo.png" alt="Neural Bot" class="w-full h-full object-cover object-[center_32%] scale-125">
             </div>
             <h1 class="text-lg font-black tracking-widest text-emerald-400 uppercase">D'TAY89 NEURAL EA</h1>
         </div>
