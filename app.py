@@ -93,10 +93,20 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- Larger Custom Robot Head Logo Centerpiece (Text Cropped Out) -->
+        <!-- Larger Custom Robot Head Logo Circle with Fallback -->
         <div class="flex flex-col items-center justify-center pt-2 pb-1 space-y-3">
-            <div class="relative w-36 h-36 rounded-full bg-zinc-950 border-2 border-emerald-500/50 flex items-center justify-center shadow-[0_0_30px_rgba(16,185,129,0.3)] overflow-hidden">
-                <img src="/static/logo.png" alt="Neural Bot" class="w-full h-full object-cover object-[center_32%] scale-125">
+            <div class="relative w-40 h-40 rounded-full bg-zinc-950 border-2 border-emerald-500/60 flex items-center justify-center shadow-[0_0_35px_rgba(16,185,129,0.35)] overflow-hidden">
+                <!-- User Image -->
+                <img src="/static/logo.png" alt="Neural Bot" class="w-full h-full object-cover object-[center_32%] scale-125" onerror="this.style.display='none'; document.getElementById('fallback-robot').style.display='flex';">
+                
+                <!-- Fallback Neon Icon if image is missing -->
+                <div id="fallback-robot" style="display:none;" class="absolute inset-0 bg-zinc-950 flex items-center justify-center">
+                    <svg class="w-20 h-20 text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M4.5 9h15M6 9l1.5 9h9L18 9M9 13h1m4 0h1m-7 3h6" />
+                        <circle cx="10" cy="11" r="1" fill="currentColor"/>
+                        <circle cx="14" cy="11" r="1" fill="currentColor"/>
+                    </svg>
+                </div>
             </div>
             <h1 class="text-lg font-black tracking-widest text-emerald-400 uppercase">D'TAY89 NEURAL EA</h1>
         </div>
@@ -109,7 +119,7 @@ HTML_TEMPLATE = """
             </div>
             <div class="border-x border-zinc-900">
                 <span class="block text-[10px] text-zinc-500 uppercase">Engine</span>
-                <span class="text-xs font-bold text-emerald-400 font-mono">ACTIVE</span>
+                <span id="engine-status-text" class="text-xs font-bold text-emerald-400 font-mono">{{ state.command }}</span>
             </div>
             <div>
                 <span class="block text-[10px] text-zinc-500 uppercase">Trades</span>
@@ -117,17 +127,18 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- Master Play / Pause Control Panel -->
-        <div class="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 shadow-lg space-y-3">
-            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Execution Engine</div>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="sendCommand('PLAY')" class="bg-emerald-600 hover:bg-emerald-500 text-black font-extrabold py-3 px-4 rounded-xl transition shadow-[0_0_15px_rgba(16,185,129,0.4)] active:scale-95 text-xs tracking-wider flex items-center justify-center space-x-1">
-                    <span>▶ PLAY AUTO</span>
-                </button>
-                <button onclick="sendCommand('PAUSE')" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold py-3 px-4 rounded-xl border border-zinc-800 transition active:scale-95 text-xs tracking-wider flex items-center justify-center space-x-1">
-                    <span>⏸ PAUSE</span>
-                </button>
-            </div>
+        <!-- Sleek Single Morphing Play/Pause Button (No Words, No Emojis) -->
+        <div class="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 shadow-lg flex flex-col items-center justify-center space-y-2">
+            <button id="engine-toggle-btn" onclick="toggleEngine()" class="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_25px_rgba(16,185,129,0.3)] active:scale-95 border-2">
+                <!-- Play Icon (Triangle) -->
+                <svg id="icon-play" class="w-8 h-8 fill-current translate-x-0.5" viewBox="0 0 24 24" style="display:none;">
+                    <path d="M8 5v14l11-7z"/>
+                </svg>
+                <!-- Pause Icon (Bars) -->
+                <svg id="icon-pause" class="w-8 h-8 fill-current" viewBox="0 0 24 24" style="display:none;">
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
+                </svg>
+            </button>
         </div>
 
         <!-- Strategy & Parameters Settings Panel -->
@@ -211,6 +222,35 @@ HTML_TEMPLATE = """
     </div>
 
     <script>
+        let currentCommand = "{{ state.command }}";
+
+        function updateButtonUI(cmd) {
+            const btn = document.getElementById('engine-toggle-btn');
+            const iconPlay = document.getElementById('icon-play');
+            const iconPause = document.getElementById('icon-pause');
+            const statusText = document.getElementById('engine-status-text');
+
+            currentCommand = cmd;
+            statusText.innerText = cmd;
+
+            if (cmd === 'PLAY') {
+                btn.className = "w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_30px_rgba(16,185,129,0.6)] active:scale-95 border-2 border-emerald-400 bg-emerald-500 text-black";
+                iconPlay.style.display = 'none';
+                iconPause.style.display = 'block';
+            } else {
+                btn.className = "w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_20px_rgba(244,63,94,0.3)] active:scale-95 border-2 border-zinc-700 bg-zinc-900 text-zinc-400";
+                iconPlay.style.display = 'block';
+                iconPause.style.display = 'none';
+            }
+        }
+
+        updateButtonUI(currentCommand);
+
+        function toggleEngine() {
+            const nextCmd = (currentCommand === 'PLAY') ? 'PAUSE' : 'PLAY';
+            sendCommand(nextCmd);
+        }
+
         const strategyTimeframes = {
             {% for key, val in strategies.items() %}
             "{{ key }}": "{{ val.timeframe }}",
@@ -240,10 +280,15 @@ HTML_TEMPLATE = """
                 document.getElementById('ea-strategy').innerText = data.ea.strategy || 'PURE_EXECUTION';
                 document.getElementById('ea-last-executed').innerText = data.ea.lastExecuted || 'None';
                 document.getElementById('stat-symbol').innerText = data.state.symbol || 'XAUUSD';
+                
+                if (data.state.command && data.state.command !== currentCommand) {
+                    updateButtonUI(data.state.command);
+                }
             }).catch(err => console.error("Telemetry sync error:", err));
         }, 2000);
 
         function sendCommand(cmd) {
+            updateButtonUI(cmd);
             const data = {
                 command: cmd,
                 strategy: document.getElementById('strategy').value,
@@ -267,7 +312,7 @@ HTML_TEMPLATE = """
         }
 
         function saveConfig() {
-            sendCommand('CONFIG');
+            sendCommand(currentCommand);
         }
     </script>
 </body>
