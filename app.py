@@ -52,7 +52,7 @@ default_state = {
     "timeframe": "M15",
     "strategy": "PURE_EXECUTION",
     "lotSize": 0.01,
-    "maxTrades": 5,
+    "maxTrades": 2,
     "tpEnabled": True,
     "tp1": 1.0,
     "tp2": 2.0,
@@ -106,7 +106,7 @@ HTML_TEMPLATE = """
         
         <div class="flex justify-between items-center px-2 py-3 border-b border-zinc-900">
             <span class="text-xs text-zinc-500 font-mono">LIVE SYSTEM</span>
-            <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider shadow-[0_0_10px_rgba(244,63,94,0.2)]">
+            <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/25 tracking-wider">
                 OFFLINE
             </div>
         </div>
@@ -197,27 +197,21 @@ HTML_TEMPLATE = """
 
                 <div class="grid grid-cols-4 gap-1.5">
                     <div>
-                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 1 (R:R)</label>
+                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 1</label>
                         <input type="number" step="0.5" id="tp1" value="{{ state.tp1 }}" class="w-full bg-black border border-zinc-800 rounded-lg p-2 text-xs text-emerald-400 font-mono text-center">
                     </div>
                     <div>
-                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 2 (R:R)</label>
+                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 2</label>
                         <input type="number" step="0.5" id="tp2" value="{{ state.tp2 }}" class="w-full bg-black border border-zinc-800 rounded-lg p-2 text-xs text-emerald-400 font-mono text-center">
                     </div>
                     <div>
-                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 3 (R:R)</label>
+                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 3</label>
                         <input type="number" step="0.5" id="tp3" value="{{ state.tp3 }}" class="w-full bg-black border border-zinc-800 rounded-lg p-2 text-xs text-emerald-400 font-mono text-center">
                     </div>
                     <div>
-                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 4 (R:R)</label>
+                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 4</label>
                         <input type="number" step="0.5" id="tp4" value="{{ state.tp4 }}" class="w-full bg-black border border-zinc-800 rounded-lg p-2 text-xs text-emerald-400 font-mono text-center">
                     </div>
-                </div>
-
-                <div class="space-y-2 pt-2 border-t border-zinc-900">
-                    <label class="block text-[10px] text-zinc-500 uppercase">Telegram Bot Config</label>
-                    <input type="text" id="telegramToken" placeholder="Bot Token" value="{{ state.telegramToken }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 font-mono">
-                    <input type="text" id="telegramChatId" placeholder="Chat ID" value="{{ state.telegramChatId }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 font-mono">
                 </div>
 
                 <button onclick="saveConfig()" class="w-full bg-zinc-900 hover:bg-zinc-800 text-emerald-400 font-bold py-3 rounded-xl border border-emerald-500/30 transition text-xs tracking-wider shadow-sm">
@@ -294,10 +288,10 @@ HTML_TEMPLATE = """
             .then(data => {
                 const badge = document.getElementById('status-badge');
                 if (data.online) {
-                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.3)]";
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 tracking-wider";
                     badge.innerText = "ONLINE";
                 } else {
-                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider shadow-[0_0_10px_rgba(244,63,94,0.2)]";
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/25 tracking-wider";
                     badge.innerText = "OFFLINE";
                 }
                 document.getElementById('ea-last-seen').innerText = data.ea.lastSeen;
@@ -305,7 +299,7 @@ HTML_TEMPLATE = """
                 document.getElementById('ea-last-executed').innerText = data.ea.lastExecuted || 'None';
                 
                 document.getElementById('stat-symbol').innerText = data.state.symbol || 'XAUUSD';
-                document.getElementById('stat-max-trades').innerText = data.state.maxTrades || 5;
+                document.getElementById('stat-max-trades').innerText = data.state.maxTrades || 2;
                 
                 if (data.state.command && data.state.command !== currentCommand && data.state.command !== 'MANUAL_BUY' && data.state.command !== 'MANUAL_SELL') {
                     updateButtonUI(data.state.command);
@@ -330,9 +324,7 @@ HTML_TEMPLATE = """
                 tp1: parseFloat(document.getElementById('tp1').value),
                 tp2: parseFloat(document.getElementById('tp2').value),
                 tp3: parseFloat(document.getElementById('tp3').value),
-                tp4: parseFloat(document.getElementById('tp4').value),
-                telegramToken: document.getElementById('telegramToken').value,
-                telegramChatId: document.getElementById('telegramChatId').value
+                tp4: parseFloat(document.getElementById('tp4').value)
             };
 
             fetch('/api/control', {
@@ -367,7 +359,13 @@ def index():
 
 @app.route("/api/bridge/command", methods=["GET"])
 def get_command():
-  return jsonify(load_state())
+  state = load_state()
+  response_data = state.copy()
+  # ONE-SHOT CONSUMER: Clear manual triggers so they never loop continuously on polls
+  if state["command"] in ["MANUAL_BUY", "MANUAL_SELL"]:
+    state["command"] = "PLAY"
+    save_state(state)
+  return jsonify(response_data)
 
 
 @app.route("/api/status", methods=["GET"])
@@ -407,8 +405,6 @@ def update_control():
       "tp2",
       "tp3",
       "tp4",
-      "telegramToken",
-      "telegramChatId",
   ]:
     if key in data:
       state[key] = data[key]
