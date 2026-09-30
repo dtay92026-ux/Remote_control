@@ -9,7 +9,7 @@ STATE_FILE = "bridge_state.json"
 
 # 18 Advanced Strategies with Optimal Timeframes
 STRATEGIES = {
-    "PURE_EXECUTION": {"name": "Pure Execution (Manual/Custom)", "timeframe": "M15"},
+    "PURE_EXECUTION": {"name": "Pure Execution (Instant/Manual)", "timeframe": "Current"},
     "THREE_STEP_SCALPER": {"name": "3-Step Amapiano Scalper", "timeframe": "M1"},
     "SGIJA_BOUNCE": {"name": "Sgija Momentum Scalper", "timeframe": "M1"},
     "PRIVATE_SCHOOL_TREND": {"name": "Private School Trend Following", "timeframe": "H1"},
@@ -35,7 +35,6 @@ default_state = {
     "timeframe": "M15",
     "strategy": "PURE_EXECUTION",
     "lotSize": 0.01,
-    "stopLoss": 100.0,
     "maxTrades": 1,
     "account": "DEMO",
     "updatedAt": 0,
@@ -102,7 +101,7 @@ HTML_TEMPLATE = """
             <h1 class="text-lg font-black tracking-widest text-emerald-400 uppercase">NEURAL EA</h1>
         </div>
 
-        <!-- Quick Status Grid Panel (Synced with Inputs) -->
+        <!-- Quick Status Grid Panel -->
         <div class="grid grid-cols-3 gap-2 bg-zinc-950 border border-zinc-900 rounded-2xl p-3 text-center shadow-lg">
             <div>
                 <span class="block text-[10px] text-zinc-500 uppercase">Symbol</span>
@@ -139,19 +138,19 @@ HTML_TEMPLATE = """
             <div class="space-y-3">
                 <div>
                     <label class="block text-[11px] text-zinc-500 mb-1">Active Neural Strategy</label>
-                    <select id="strategy" onchange="updateRecommendedTimeframe()" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
+                    <select id="strategy" onchange="handleStrategyChange()" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
                         {% for key, val in strategies.items() %}
                         <option value="{{ key }}" {% if state.strategy == key %}selected{% endif %}>{{ val.name }} ({{ val.timeframe }})</option>
                         {% endfor %}
                     </select>
                 </div>
 
-                <div class="grid grid-cols-3 gap-2">
+                <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-[10px] text-zinc-500 mb-1">Symbol</label>
                         <input type="text" id="symbol" value="{{ state.symbol }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono uppercase text-center">
                     </div>
-                    <div>
+                    <div id="timeframe-container">
                         <label class="block text-[10px] text-zinc-500 mb-1">Timeframe</label>
                         <select id="timeframe" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
                             <option value="M1" {% if state.timeframe == 'M1' %}selected{% endif %}>M1</option>
@@ -163,16 +162,9 @@ HTML_TEMPLATE = """
                             <option value="D1" {% if state.timeframe == 'D1' %}selected{% endif %}>D1</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-[10px] text-zinc-500 mb-1">Account</label>
-                        <select id="account" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
-                            <option value="DEMO" {% if state.account == 'DEMO' %}selected{% endif %}>DEMO</option>
-                            <option value="LIVE" {% if state.account == 'LIVE' %}selected{% endif %}>LIVE</option>
-                        </select>
-                    </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-2">
+                <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-[10px] text-zinc-500 mb-1">Lot Size</label>
                         <input type="number" step="0.01" id="lotSize" value="{{ state.lotSize }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
@@ -180,10 +172,6 @@ HTML_TEMPLATE = """
                     <div>
                         <label class="block text-[10px] text-zinc-500 mb-1">Max Trades</label>
                         <input type="number" id="maxTrades" value="{{ state.maxTrades }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] text-zinc-500 mb-1">Stop Loss</label>
-                        <input type="number" id="stopLoss" value="{{ state.stopLoss }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
                     </div>
                 </div>
 
@@ -248,12 +236,20 @@ HTML_TEMPLATE = """
             {% endfor %}
         };
 
-        function updateRecommendedTimeframe() {
+        function handleStrategyChange() {
             const strat = document.getElementById('strategy').value;
-            if (strategyTimeframes[strat]) {
-                document.getElementById('timeframe').value = strategyTimeframes[strat];
+            const tfContainer = document.getElementById('timeframe-container');
+            if (strat === 'PURE_EXECUTION') {
+                tfContainer.style.display = 'none';
+            } else {
+                tfContainer.style.display = 'block';
+                if (strategyTimeframes[strat]) {
+                    document.getElementById('timeframe').value = strategyTimeframes[strat];
+                }
             }
         }
+
+        handleStrategyChange();
 
         setInterval(() => {
             if (Date.now() - lastUserActionTime < 3000) return;
@@ -296,7 +292,6 @@ HTML_TEMPLATE = """
                 timeframe: document.getElementById('timeframe').value,
                 lotSize: parseFloat(document.getElementById('lotSize').value),
                 maxTrades: parseInt(maxT),
-                stopLoss: parseFloat(document.getElementById('stopLoss').value),
                 account: document.getElementById('account').value
             };
 
@@ -366,7 +361,6 @@ def update_control():
       "timeframe",
       "strategy",
       "lotSize",
-      "stopLoss",
       "maxTrades",
       "account",
   ]:
