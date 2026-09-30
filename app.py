@@ -7,11 +7,10 @@ app = Flask(__name__)
 
 STATE_FILE = "bridge_state.json"
 
-# Professional Trading Strategies
 STRATEGIES = {
     "PURE_EXECUTION": {
-        "name": "Pure Execution (Manual Buttons)",
-        "timeframe": "Current",
+        "name": "Pure Execution (M1 Candle Dynamic)",
+        "timeframe": "M1",
     },
     "THREE_STEP_SCALPER": {
         "name": "Micro-Momentum Scalper",
@@ -50,7 +49,7 @@ STRATEGIES = {
 default_state = {
     "command": "PAUSE",
     "symbol": "XAUUSD",
-    "timeframe": "M15",
+    "timeframe": "M1",
     "strategy": "PURE_EXECUTION",
     "lotSize": 0.01,
     "maxTrades": 1,
@@ -98,24 +97,21 @@ HTML_TEMPLATE = """
 <body class="bg-black text-slate-100 min-h-screen font-sans p-4 flex justify-center">
     <div class="w-full max-w-sm space-y-4 pb-10">
         
-        <!-- Top Navigation Bar -->
         <div class="flex justify-between items-center px-2 py-3 border-b border-zinc-900">
             <span class="text-xs text-zinc-500 font-mono">LIVE SYSTEM</span>
-            <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider shadow-[0_0_10px_rgba(244,63,94,0.2)]">
+            <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider">
                 OFFLINE
             </div>
         </div>
 
-        <!-- Custom Glowing Circle with D'TAY89 Typography -->
         <div class="flex flex-col items-center justify-center pt-2 pb-1 space-y-3">
             <div class="relative w-40 h-40 rounded-full bg-zinc-950 border-2 border-emerald-500/60 flex items-center justify-center shadow-[0_0_35px_rgba(16,185,129,0.35)] overflow-hidden">
                 <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.1)_0%,transparent_70%)]"></div>
-                <span class="text-xl font-black tracking-widest text-emerald-400 font-mono drop-shadow-[0_0_12px_rgba(52,211,153,0.8)]">D'TAY89</span>
+                <span class="text-xl font-black tracking-widest text-emerald-400 font-mono">D'TAY89</span>
             </div>
             <h1 class="text-lg font-black tracking-widest text-emerald-400 uppercase">NEURAL EA</h1>
         </div>
 
-        <!-- Quick Status Grid Panel -->
         <div class="grid grid-cols-3 gap-2 bg-zinc-950 border border-zinc-900 rounded-2xl p-3 text-center shadow-lg">
             <div>
                 <span class="block text-[10px] text-zinc-500 uppercase">Symbol</span>
@@ -131,7 +127,6 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- Stable Samsung-Style Music Toggle Button -->
         <div class="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 shadow-lg flex flex-col items-center justify-center space-y-2">
             <button id="engine-toggle-btn" onclick="toggleEngine()" class="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.2)] active:scale-95 border-2 border-zinc-800 bg-zinc-900 text-emerald-400">
                 <svg id="icon-play" class="w-8 h-8 fill-current translate-x-0.5 text-emerald-400" viewBox="0 0 24 24">
@@ -143,27 +138,13 @@ HTML_TEMPLATE = """
             </button>
         </div>
 
-        <!-- Manual Buy / Sell Panel (Only visible for Pure Execution) -->
-        <div id="manual-execution-panel" class="bg-zinc-950 border border-emerald-500/30 rounded-2xl p-4 shadow-lg space-y-2">
-            <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider text-center mb-2">Pure Execution Manual Controls</div>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="sendManualAction('MANUAL_BUY')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-black font-extrabold py-3 rounded-xl transition text-xs tracking-wider shadow-[0_0_15px_rgba(16,185,129,0.4)]">
-                    BUY 🟢
-                </button>
-                <button onclick="sendManualAction('MANUAL_SELL')" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-extrabold py-3 rounded-xl transition text-xs tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.4)]">
-                    SELL 🔴
-                </button>
-            </div>
-        </div>
-
-        <!-- Strategy & Parameters Settings Panel -->
         <div class="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 shadow-lg space-y-3">
             <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Strategy Matrix</div>
             
             <div class="space-y-3">
                 <div>
                     <label class="block text-[11px] text-zinc-500 mb-1">Active Neural Strategy</label>
-                    <select id="strategy" onchange="handleStrategyChange()" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
+                    <select id="strategy" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
                         {% for key, val in strategies.items() %}
                         <option value="{{ key }}" {% if state.strategy == key %}selected{% endif %}>{{ val.name }} ({{ val.timeframe }})</option>
                         {% endfor %}
@@ -192,7 +173,6 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- Telemetry Panel -->
         <div class="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 shadow-lg space-y-2 text-xs">
             <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Telemetry Log</div>
             <div class="flex justify-between py-1 border-b border-zinc-900/50">
@@ -241,18 +221,6 @@ HTML_TEMPLATE = """
             sendCommand(nextCmd);
         }
 
-        function handleStrategyChange() {
-            const strat = document.getElementById('strategy').value;
-            const manualPanel = document.getElementById('manual-execution-panel');
-            if (strat === 'PURE_EXECUTION') {
-                manualPanel.style.display = 'block';
-            } else {
-                manualPanel.style.display = 'none';
-            }
-        }
-
-        handleStrategyChange();
-
         setInterval(() => {
             if (Date.now() - lastUserActionTime < 3000) return;
 
@@ -261,10 +229,10 @@ HTML_TEMPLATE = """
             .then(data => {
                 const badge = document.getElementById('status-badge');
                 if (data.online) {
-                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.3)]";
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 tracking-wider";
                     badge.innerText = "ONLINE";
                 } else {
-                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider shadow-[0_0_10px_rgba(244,63,94,0.2)]";
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider";
                     badge.innerText = "OFFLINE";
                 }
                 document.getElementById('ea-last-seen').innerText = data.ea.lastSeen;
@@ -274,7 +242,7 @@ HTML_TEMPLATE = """
                 document.getElementById('stat-symbol').innerText = data.state.symbol || 'XAUUSD';
                 document.getElementById('stat-max-trades').innerText = data.state.maxTrades || 1;
                 
-                if (data.state.command && data.state.command !== currentCommand && data.state.command !== 'MANUAL_BUY' && data.state.command !== 'MANUAL_SELL') {
+                if (data.state.command && data.state.command !== currentCommand) {
                     updateButtonUI(data.state.command);
                 }
             }).catch(err => console.error("Telemetry sync error:", err));
@@ -300,11 +268,6 @@ HTML_TEMPLATE = """
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-        }
-
-        function sendManualAction(actionCmd) {
-            lastUserActionTime = Date.now();
-            sendCommand(actionCmd);
         }
 
         function saveConfig() {
