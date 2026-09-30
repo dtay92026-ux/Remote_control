@@ -79,44 +79,70 @@ HTML_TEMPLATE = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D'TAY89 | Advanced Strategy Control Panel</title>
+    <title>D'TAY89 | Neural Executor</title>
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans p-4">
-    <div class="max-w-md mx-auto space-y-6">
+<body class="bg-black text-slate-100 min-h-screen font-sans p-4 flex justify-center">
+    <div class="w-full max-w-sm space-y-4 pb-10">
         
-        <!-- Header -->
-        <div class="flex justify-between items-center border-b border-slate-800 pb-4">
-            <div>
-                <h1 class="text-xl font-bold text-emerald-400 tracking-wider">D'TAY89 EXECUTOR</h1>
-                <p class="text-xs text-slate-400">18-Strategy Automated Bridge</p>
-            </div>
-            <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30">
+        <!-- Top Navigation Bar -->
+        <div class="flex justify-between items-center px-2 py-3 border-b border-zinc-900">
+            <span class="text-xs text-zinc-500 font-mono">LIVE SYSTEM</span>
+            <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider shadow-[0_0_10px_rgba(244,63,94,0.2)]">
                 OFFLINE
             </div>
         </div>
 
-        <!-- Master Automation Control (Play / Pause) -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-3">
-            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Master Automation</h2>
+        <!-- Glowing Robot Head Logo Centerpiece -->
+        <div class="flex flex-col items-center justify-center pt-2 pb-1 space-y-3">
+            <div class="relative w-28 h-28 rounded-full bg-zinc-950 border border-emerald-500/40 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.25)]">
+                <!-- Cyberpunk Glowing Green Robot Head SVG -->
+                <svg class="w-16 h-16 text-emerald-400 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M4.5 9h15M6 9l1.5 9h9L18 9M9 13h1m4 0h1m-7 3h6" />
+                    <circle cx="10" cy="11" r="1" fill="currentColor"/>
+                    <circle cx="14" cy="11" r="1" fill="currentColor"/>
+                </svg>
+            </div>
+            <h1 class="text-lg font-black tracking-widest text-emerald-400 uppercase">D'TAY89 NEURAL EA</h1>
+        </div>
+
+        <!-- Quick Status Grid Panel -->
+        <div class="grid grid-cols-3 gap-2 bg-zinc-950 border border-zinc-900 rounded-2xl p-3 text-center shadow-lg">
+            <div>
+                <span class="block text-[10px] text-zinc-500 uppercase">Symbol</span>
+                <span id="stat-symbol" class="text-xs font-bold text-zinc-200 font-mono">{{ state.symbol }}</span>
+            </div>
+            <div class="border-x border-zinc-900">
+                <span class="block text-[10px] text-zinc-500 uppercase">Engine</span>
+                <span class="text-xs font-bold text-emerald-400 font-mono">ACTIVE</span>
+            </div>
+            <div>
+                <span class="block text-[10px] text-zinc-500 uppercase">Trades</span>
+                <span class="text-xs font-bold text-zinc-200 font-mono">{{ state.maxTrades }}</span>
+            </div>
+        </div>
+
+        <!-- Master Play / Pause Control Panel -->
+        <div class="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 shadow-lg space-y-3">
+            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-1">Execution Engine</div>
             <div class="grid grid-cols-2 gap-3">
-                <button onclick="sendCommand('PLAY')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-lg transition shadow-md active:scale-95 flex items-center justify-center space-x-2">
-                    <span>▶ PLAY</span>
+                <button onclick="sendCommand('PLAY')" class="bg-emerald-600 hover:bg-emerald-500 text-black font-extrabold py-3 px-4 rounded-xl transition shadow-[0_0_15px_rgba(16,185,129,0.4)] active:scale-95 text-xs tracking-wider flex items-center justify-center space-x-1">
+                    <span>▶ PLAY AUTO</span>
                 </button>
-                <button onclick="sendCommand('PAUSE')" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-4 rounded-lg transition shadow-md active:scale-95 flex items-center justify-center space-x-2">
+                <button onclick="sendCommand('PAUSE')" class="bg-zinc-900 hover:bg-zinc-800 text-zinc-300 font-bold py-3 px-4 rounded-xl border border-zinc-800 transition active:scale-95 text-xs tracking-wider flex items-center justify-center space-x-1">
                     <span>⏸ PAUSE</span>
                 </button>
             </div>
         </div>
 
-        <!-- Strategy & Parameters Form -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-4">
-            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Strategy & Timeframe</h2>
+        <!-- Strategy & Parameters Settings Panel -->
+        <div class="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 shadow-lg space-y-3">
+            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Strategy Matrix</div>
             
             <div class="space-y-3">
                 <div>
-                    <label class="block text-xs text-slate-400 mb-1">Select Strategy (Auto-Timeframe Enabled)</label>
-                    <select id="strategy" onchange="updateRecommendedTimeframe()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                    <label class="block text-[11px] text-zinc-500 mb-1">Active Neural Strategy</label>
+                    <select id="strategy" onchange="updateRecommendedTimeframe()" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
                         {% for key, val in strategies.items() %}
                         <option value="{{ key }}" {% if state.strategy == key %}selected{% endif %}>{{ val.name }} ({{ val.timeframe }})</option>
                         {% endfor %}
@@ -125,12 +151,12 @@ HTML_TEMPLATE = """
 
                 <div class="grid grid-cols-3 gap-2">
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Symbol</label>
-                        <input type="text" id="symbol" value="{{ state.symbol }}" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500 uppercase">
+                        <label class="block text-[10px] text-zinc-500 mb-1">Symbol</label>
+                        <input type="text" id="symbol" value="{{ state.symbol }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono uppercase text-center">
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Timeframe</label>
-                        <select id="timeframe" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <label class="block text-[10px] text-zinc-500 mb-1">Timeframe</label>
+                        <select id="timeframe" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
                             <option value="M1" {% if state.timeframe == 'M1' %}selected{% endif %}>M1</option>
                             <option value="M5" {% if state.timeframe == 'M5' %}selected{% endif %}>M5</option>
                             <option value="M15" {% if state.timeframe == 'M15' %}selected{% endif %}>M15</option>
@@ -141,8 +167,8 @@ HTML_TEMPLATE = """
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Account</label>
-                        <select id="account" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <label class="block text-[10px] text-zinc-500 mb-1">Account</label>
+                        <select id="account" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
                             <option value="DEMO" {% if state.account == 'DEMO' %}selected{% endif %}>DEMO</option>
                             <option value="LIVE" {% if state.account == 'LIVE' %}selected{% endif %}>LIVE</option>
                         </select>
@@ -151,39 +177,39 @@ HTML_TEMPLATE = """
 
                 <div class="grid grid-cols-3 gap-2">
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Lot Size</label>
-                        <input type="number" step="0.01" id="lotSize" value="{{ state.lotSize }}" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <label class="block text-[10px] text-zinc-500 mb-1">Lot Size</label>
+                        <input type="number" step="0.01" id="lotSize" value="{{ state.lotSize }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Max Trades</label>
-                        <input type="number" id="maxTrades" value="{{ state.maxTrades }}" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <label class="block text-[10px] text-zinc-500 mb-1">Max Trades</label>
+                        <input type="number" id="maxTrades" value="{{ state.maxTrades }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
                     </div>
                     <div>
-                        <label class="block text-xs text-slate-400 mb-1">Stop Loss (Pts)</label>
-                        <input type="number" id="stopLoss" value="{{ state.stopLoss }}" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
+                        <label class="block text-[10px] text-zinc-500 mb-1">Stop Loss</label>
+                        <input type="number" id="stopLoss" value="{{ state.stopLoss }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
                     </div>
                 </div>
 
-                <button onclick="saveConfig()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-lg transition text-sm">
-                    Update Strategy & Config
+                <button onclick="saveConfig()" class="w-full bg-zinc-900 hover:bg-zinc-800 text-emerald-400 font-bold py-3 rounded-xl border border-emerald-500/30 transition text-xs tracking-wider shadow-sm">
+                    UPDATE CONFIGURATION
                 </button>
             </div>
         </div>
 
-        <!-- EA Live Status Telemetry -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-2 text-xs">
-            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide mb-2">EA Telemetry</h2>
-            <div class="flex justify-between py-1 border-b border-slate-800">
-                <span class="text-slate-400">Last Seen:</span>
-                <span id="ea-last-seen" class="text-slate-200 font-mono">{{ ea.lastSeen }}</span>
+        <!-- Telemetry Panel -->
+        <div class="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 shadow-lg space-y-2 text-xs">
+            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider mb-2">Telemetry Log</div>
+            <div class="flex justify-between py-1 border-b border-zinc-900/50">
+                <span class="text-zinc-500">Last Seen:</span>
+                <span id="ea-last-seen" class="text-zinc-300 font-mono">{{ ea.lastSeen }}</span>
             </div>
-            <div class="flex justify-between py-1 border-b border-slate-800">
-                <span class="text-slate-400">Active Strategy:</span>
+            <div class="flex justify-between py-1 border-b border-zinc-900/50">
+                <span class="text-zinc-500">Active Strategy:</span>
                 <span id="ea-strategy" class="text-emerald-400 font-mono">{{ ea.strategy }}</span>
             </div>
-            <div class="flex justify-between py-1 border-b border-slate-800">
-                <span class="text-slate-400">Last Executed:</span>
-                <span id="ea-last-executed" class="text-slate-200 font-mono">{{ ea.lastExecuted }}</span>
+            <div class="flex justify-between py-1">
+                <span class="text-zinc-500">Last Executed:</span>
+                <span id="ea-last-executed" class="text-zinc-300 font-mono">{{ ea.lastExecuted }}</span>
             </div>
         </div>
 
@@ -209,15 +235,16 @@ HTML_TEMPLATE = """
             .then(data => {
                 const badge = document.getElementById('status-badge');
                 if (data.online) {
-                    badge.className = "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.3)]";
                     badge.innerText = "ONLINE";
                 } else {
-                    badge.className = "px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider shadow-[0_0_10px_rgba(244,63,94,0.2)]";
                     badge.innerText = "OFFLINE";
                 }
                 document.getElementById('ea-last-seen').innerText = data.ea.lastSeen;
                 document.getElementById('ea-strategy').innerText = data.ea.strategy || 'PURE_EXECUTION';
                 document.getElementById('ea-last-executed').innerText = data.ea.lastExecuted || 'None';
+                document.getElementById('stat-symbol').innerText = data.state.symbol || 'XAUUSD';
             }).catch(err => console.error("Telemetry sync error:", err));
         }, 2000);
 
