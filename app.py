@@ -9,8 +9,8 @@ STATE_FILE = "bridge_state.json"
 
 STRATEGIES = {
     "PURE_EXECUTION": {
-        "name": "Pure Execution (M1 Candle Dynamic)",
-        "timeframe": "M1",
+        "name": "Pure M15 Rejection/Engulfing Scalper",
+        "timeframe": "M15",
     },
     "THREE_STEP_SCALPER": {
         "name": "Micro-Momentum Scalper",
@@ -49,10 +49,17 @@ STRATEGIES = {
 default_state = {
     "command": "PAUSE",
     "symbol": "XAUUSD",
-    "timeframe": "M1",
+    "timeframe": "M15",
     "strategy": "PURE_EXECUTION",
     "lotSize": 0.01,
-    "maxTrades": 1,
+    "maxTrades": 5,
+    "tpEnabled": True,
+    "tp1": 1.0,
+    "tp2": 2.0,
+    "tp3": 3.0,
+    "tp4": 4.0,
+    "telegramToken": "",
+    "telegramChatId": "",
     "updatedAt": 0,
 }
 
@@ -99,7 +106,7 @@ HTML_TEMPLATE = """
         
         <div class="flex justify-between items-center px-2 py-3 border-b border-zinc-900">
             <span class="text-xs text-zinc-500 font-mono">LIVE SYSTEM</span>
-            <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider">
+            <div id="status-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider shadow-[0_0_10px_rgba(244,63,94,0.2)]">
                 OFFLINE
             </div>
         </div>
@@ -107,7 +114,7 @@ HTML_TEMPLATE = """
         <div class="flex flex-col items-center justify-center pt-2 pb-1 space-y-3">
             <div class="relative w-40 h-40 rounded-full bg-zinc-950 border-2 border-emerald-500/60 flex items-center justify-center shadow-[0_0_35px_rgba(16,185,129,0.35)] overflow-hidden">
                 <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.1)_0%,transparent_70%)]"></div>
-                <span class="text-xl font-black tracking-widest text-emerald-400 font-mono">D'TAY89</span>
+                <span class="text-xl font-black tracking-widest text-emerald-400 font-mono drop-shadow-[0_0_12px_rgba(52,211,153,0.8)]">D'TAY89</span>
             </div>
             <h1 class="text-lg font-black tracking-widest text-emerald-400 uppercase">NEURAL EA</h1>
         </div>
@@ -122,7 +129,7 @@ HTML_TEMPLATE = """
                 <span id="engine-status-text" class="text-xs font-bold text-emerald-400 font-mono">{{ state.command }}</span>
             </div>
             <div>
-                <span class="block text-[10px] text-zinc-500 uppercase">Trades</span>
+                <span class="block text-[10px] text-zinc-500 uppercase">Max Trades</span>
                 <span id="stat-max-trades" class="text-xs font-bold text-zinc-200 font-mono">{{ state.maxTrades }}</span>
             </div>
         </div>
@@ -138,13 +145,25 @@ HTML_TEMPLATE = """
             </button>
         </div>
 
+        <div id="manual-execution-panel" class="bg-zinc-950 border border-emerald-500/30 rounded-2xl p-4 shadow-lg space-y-2">
+            <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider text-center mb-2">Pure M15 Rejection / Engulfing Controls</div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="sendManualAction('MANUAL_BUY')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-black font-extrabold py-3 rounded-xl transition text-xs tracking-wider shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                    FORCE BUY 🟢
+                </button>
+                <button onclick="sendManualAction('MANUAL_SELL')" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-extrabold py-3 rounded-xl transition text-xs tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.4)]">
+                    FORCE SELL 🔴
+                </button>
+            </div>
+        </div>
+
         <div class="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 shadow-lg space-y-3">
-            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Strategy Matrix</div>
+            <div class="text-xs font-semibold text-zinc-400 uppercase tracking-wider">Strategy Matrix & Risk Configuration</div>
             
             <div class="space-y-3">
                 <div>
                     <label class="block text-[11px] text-zinc-500 mb-1">Active Neural Strategy</label>
-                    <select id="strategy" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
+                    <select id="strategy" onchange="handleStrategyChange()" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
                         {% for key, val in strategies.items() %}
                         <option value="{{ key }}" {% if state.strategy == key %}selected{% endif %}>{{ val.name }} ({{ val.timeframe }})</option>
                         {% endfor %}
@@ -162,9 +181,43 @@ HTML_TEMPLATE = """
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-[10px] text-zinc-500 mb-1">Max Trades</label>
-                    <input type="number" id="maxTrades" value="{{ state.maxTrades }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-[10px] text-zinc-500 mb-1">Max Trades (Scaling)</label>
+                        <input type="number" id="maxTrades" value="{{ state.maxTrades }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-zinc-500 mb-1">Take Profit Mode</label>
+                        <select id="tpEnabled" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
+                            <option value="true" {% if state.tpEnabled %}selected{% endif %}>ENABLED (Multi-TP)</option>
+                            <option value="false" {% if not state.tpEnabled %}selected{% endif %}>DISABLED</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-1.5">
+                    <div>
+                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 1 (R:R)</label>
+                        <input type="number" step="0.5" id="tp1" value="{{ state.tp1 }}" class="w-full bg-black border border-zinc-800 rounded-lg p-2 text-xs text-emerald-400 font-mono text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 2 (R:R)</label>
+                        <input type="number" step="0.5" id="tp2" value="{{ state.tp2 }}" class="w-full bg-black border border-zinc-800 rounded-lg p-2 text-xs text-emerald-400 font-mono text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 3 (R:R)</label>
+                        <input type="number" step="0.5" id="tp3" value="{{ state.tp3 }}" class="w-full bg-black border border-zinc-800 rounded-lg p-2 text-xs text-emerald-400 font-mono text-center">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] text-zinc-500 mb-1 text-center">TP 4 (R:R)</label>
+                        <input type="number" step="0.5" id="tp4" value="{{ state.tp4 }}" class="w-full bg-black border border-zinc-800 rounded-lg p-2 text-xs text-emerald-400 font-mono text-center">
+                    </div>
+                </div>
+
+                <div class="space-y-2 pt-2 border-t border-zinc-900">
+                    <label class="block text-[10px] text-zinc-500 uppercase">Telegram Bot Config</label>
+                    <input type="text" id="telegramToken" placeholder="Bot Token" value="{{ state.telegramToken }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 font-mono">
+                    <input type="text" id="telegramChatId" placeholder="Chat ID" value="{{ state.telegramChatId }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 font-mono">
                 </div>
 
                 <button onclick="saveConfig()" class="w-full bg-zinc-900 hover:bg-zinc-800 text-emerald-400 font-bold py-3 rounded-xl border border-emerald-500/30 transition text-xs tracking-wider shadow-sm">
@@ -221,6 +274,18 @@ HTML_TEMPLATE = """
             sendCommand(nextCmd);
         }
 
+        function handleStrategyChange() {
+            const strat = document.getElementById('strategy').value;
+            const manualPanel = document.getElementById('manual-execution-panel');
+            if (strat === 'PURE_EXECUTION') {
+                manualPanel.style.display = 'block';
+            } else {
+                manualPanel.style.display = 'none';
+            }
+        }
+
+        handleStrategyChange();
+
         setInterval(() => {
             if (Date.now() - lastUserActionTime < 3000) return;
 
@@ -229,10 +294,10 @@ HTML_TEMPLATE = """
             .then(data => {
                 const badge = document.getElementById('status-badge');
                 if (data.online) {
-                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 tracking-wider";
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 tracking-wider shadow-[0_0_10px_rgba(16,185,129,0.3)]";
                     badge.innerText = "ONLINE";
                 } else {
-                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider";
+                    badge.className = "px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-500 border border-rose-500/20 tracking-wider shadow-[0_0_10px_rgba(244,63,94,0.2)]";
                     badge.innerText = "OFFLINE";
                 }
                 document.getElementById('ea-last-seen').innerText = data.ea.lastSeen;
@@ -240,9 +305,9 @@ HTML_TEMPLATE = """
                 document.getElementById('ea-last-executed').innerText = data.ea.lastExecuted || 'None';
                 
                 document.getElementById('stat-symbol').innerText = data.state.symbol || 'XAUUSD';
-                document.getElementById('stat-max-trades').innerText = data.state.maxTrades || 1;
+                document.getElementById('stat-max-trades').innerText = data.state.maxTrades || 5;
                 
-                if (data.state.command && data.state.command !== currentCommand) {
+                if (data.state.command && data.state.command !== currentCommand && data.state.command !== 'MANUAL_BUY' && data.state.command !== 'MANUAL_SELL') {
                     updateButtonUI(data.state.command);
                 }
             }).catch(err => console.error("Telemetry sync error:", err));
@@ -260,7 +325,14 @@ HTML_TEMPLATE = """
                 strategy: document.getElementById('strategy').value,
                 symbol: sym,
                 lotSize: parseFloat(document.getElementById('lotSize').value),
-                maxTrades: parseInt(maxT)
+                maxTrades: parseInt(maxT),
+                tpEnabled: document.getElementById('tpEnabled').value === 'true',
+                tp1: parseFloat(document.getElementById('tp1').value),
+                tp2: parseFloat(document.getElementById('tp2').value),
+                tp3: parseFloat(document.getElementById('tp3').value),
+                tp4: parseFloat(document.getElementById('tp4').value),
+                telegramToken: document.getElementById('telegramToken').value,
+                telegramChatId: document.getElementById('telegramChatId').value
             };
 
             fetch('/api/control', {
@@ -268,6 +340,11 @@ HTML_TEMPLATE = """
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
+        }
+
+        function sendManualAction(actionCmd) {
+            lastUserActionTime = Date.now();
+            sendCommand(actionCmd);
         }
 
         function saveConfig() {
@@ -319,7 +396,20 @@ def update_control():
   if not data:
     return jsonify({"error": "No data provided"}), 400
 
-  for key in ["command", "symbol", "strategy", "lotSize", "maxTrades"]:
+  for key in [
+      "command",
+      "symbol",
+      "strategy",
+      "lotSize",
+      "maxTrades",
+      "tpEnabled",
+      "tp1",
+      "tp2",
+      "tp3",
+      "tp4",
+      "telegramToken",
+      "telegramChatId",
+  ]:
     if key in data:
       state[key] = data[key]
 
