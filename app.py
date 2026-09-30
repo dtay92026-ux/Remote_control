@@ -8,7 +8,7 @@ app = Flask(__name__)
 STATE_FILE = "bridge_state.json"
 
 default_state = {
-    "command": "STOP",
+    "command": "PAUSE",
     "symbol": "XAUUSD",
     "timeframe": "M15",
     "strategy": "PURE_EXECUTION",
@@ -38,7 +38,6 @@ def save_state(state):
 if not os.path.exists(STATE_FILE):
   save_state(default_state)
 
-# Live status reported back from the MT5 EA heartbeat
 ea_heartbeat = {
     "pair": "DTAY89",
     "symbol": "XAUUSD",
@@ -75,15 +74,15 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- Master Automation Control -->
+        <!-- Master Automation Control (Play / Pause) -->
         <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-3">
-            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Master Control</h2>
+            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Automation State</h2>
             <div class="grid grid-cols-2 gap-3">
-                <button onclick="sendCommand('START')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-lg transition shadow-md active:scale-95">
-                    START AUTO
+                <button onclick="sendCommand('PLAY')" class="bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 px-4 rounded-lg transition shadow-md active:scale-95 flex items-center justify-center space-x-2">
+                    <span>▶ PLAY</span>
                 </button>
-                <button onclick="sendCommand('STOP')" class="bg-rose-600 hover:bg-rose-500 text-white font-bold py-3 px-4 rounded-lg transition shadow-md active:scale-95">
-                    STOP AUTO
+                <button onclick="sendCommand('PAUSE')" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-3 px-4 rounded-lg transition shadow-md active:scale-95 flex items-center justify-center space-x-2">
+                    <span>⏸ PAUSE</span>
                 </button>
             </div>
         </div>
@@ -93,18 +92,16 @@ HTML_TEMPLATE = """
             <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Strategy & Parameters</h2>
             
             <div class="space-y-3">
-                <!-- Strategy Selector -->
                 <div>
                     <label class="block text-xs text-slate-400 mb-1">Active Strategy</label>
                     <select id="strategy" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-slate-200 focus:outline-none focus:border-emerald-500">
-                        <option value="PURE_EXECUTION" {% if state.strategy == 'PURE_EXECUTION' %}selected{% endif %}>Pure Execution (No Rules)</option>
+                        <option value="PURE_EXECUTION" {% if state.strategy == 'PURE_EXECUTION' %}selected{% endif %}>Pure Execution (Automated)</option>
                         <option value="SUPPORT_RESISTANCE" {% if state.strategy == 'SUPPORT_RESISTANCE' %}selected{% endif %}>Support & Resistance Rejection</option>
                         <option value="TREND_FOLLOWING" {% if state.strategy == 'TREND_FOLLOWING' %}selected{% endif %}>Trend Following Momentum</option>
                         <option value="PULLBACK" {% if state.strategy == 'PULLBACK' %}selected{% endif %}>Price Zone Pullback</option>
                     </select>
                 </div>
 
-                <!-- Symbol, Timeframe & Account Mode -->
                 <div class="grid grid-cols-3 gap-2">
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Symbol</label>
@@ -131,7 +128,6 @@ HTML_TEMPLATE = """
                     </div>
                 </div>
 
-                <!-- Lot Size, Max Trades & Stop Loss -->
                 <div class="grid grid-cols-3 gap-2">
                     <div>
                         <label class="block text-xs text-slate-400 mb-1">Lot Size</label>
@@ -149,19 +145,6 @@ HTML_TEMPLATE = """
 
                 <button onclick="saveConfig()" class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 rounded-lg transition text-sm">
                     Update Configuration
-                </button>
-            </div>
-        </div>
-
-        <!-- Manual Instant Trigger Buttons -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 shadow-lg space-y-3">
-            <h2 class="text-sm font-semibold text-slate-300 uppercase tracking-wide">Instant Triggers</h2>
-            <div class="grid grid-cols-2 gap-3">
-                <button onclick="sendManualCommand('BUY')" class="bg-cyan-600 hover:bg-cyan-500 text-white font-bold py-2.5 px-4 rounded-lg transition text-sm">
-                    INSTANT BUY
-                </button>
-                <button onclick="sendManualCommand('SELL')" class="bg-amber-600 hover:bg-amber-500 text-white font-bold py-2.5 px-4 rounded-lg transition text-sm">
-                    INSTANT SELL
                 </button>
             </div>
         </div>
@@ -186,7 +169,6 @@ HTML_TEMPLATE = """
     </div>
 
     <script>
-        // Poll status every 2 seconds to update ONLINE/OFFLINE badge & telemetry live
         setInterval(() => {
             fetch('/api/status')
             .then(res => res.json())
@@ -224,18 +206,12 @@ HTML_TEMPLATE = """
             })
             .then(res => res.json())
             .then(response => {
-                alert("Command sent: " + cmd);
+                console.log("Command sent: " + cmd);
             });
         }
 
         function saveConfig() {
             sendCommand('CONFIG');
-        }
-
-        function sendManualCommand(cmd) {
-            if(confirm("Are you sure you want to trigger a manual " + cmd + "?")) {
-                sendCommand(cmd);
-            }
         }
     </script>
 </body>
@@ -258,7 +234,6 @@ def get_command():
 def get_status():
   state = load_state()
   current_time = int(datetime.utcnow().timestamp())
-  # Considered online if heartbeat received within the last 15 seconds
   is_online = (current_time - ea_heartbeat.get("lastSeenEpoch", 0)) < 15
   return jsonify({"state": state, "ea": ea_heartbeat, "online": is_online})
 
@@ -300,4 +275,4 @@ def update_control():
 
 
 if __name__ == "__main__":
-  app.run(host="0.0.0.0", port=5000)
+  app.run(host="0.0.0.0", port5000)
