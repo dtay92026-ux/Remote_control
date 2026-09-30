@@ -1,10 +1,13 @@
 from datetime import datetime
+import json
+import os
 from flask import Flask, jsonify, render_template_string, request
 
 app = Flask(__name__)
 
-# Global state that the EA polls and the web app controls
-bridge_state = {
+STATE_FILE = "bridge_state.json"
+
+default_state = {
     "command": "STOP",
     "symbol": "XAUUSD",
     "timeframe": "M15",
@@ -13,8 +16,27 @@ bridge_state = {
     "stopLoss": 100.0,
     "maxTrades": 1,
     "account": "DEMO",
-    "updatedAt": int(datetime.utcnow().timestamp()),
+    "updatedAt": 0,
 }
+
+
+def load_state():
+  if os.path.exists(STATE_FILE):
+    try:
+      with open(STATE_FILE, "r") as f:
+        return json.load(f)
+    except:
+      pass
+  return default_state.copy()
+
+
+def save_state(state):
+  with open(STATE_FILE, "w") as f:
+    json.dump(state, f)
+
+
+if not os.path.exists(STATE_FILE):
+  save_state(default_state)
 
 # Live status reported back from the MT5 EA heartbeat
 ea_heartbeat = {
@@ -25,11 +47,11 @@ ea_heartbeat = {
     "account": "DEMO",
     "enabled": False,
     "lastCommand": "",
-    "lastExecuted": "",
+    "lastExecuted": "None",
     "lastSeen": "Never",
+    "lastSeenEpoch": 0,
 }
 
-# Embedded Mobile Dashboard HTML
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -164,6 +186,25 @@ HTML_TEMPLATE = """
     </div>
 
     <script>
+        // Poll status every 2 seconds to update ONLINE/OFFLINE badge & telemetry live
+        setInterval(() => {
+            fetch('/api/status')
+            .then(res => res.json())
+            .then(data => {
+                const badge = document.getElementById('status-badge');
+                if (data.online) {
+                    badge.className = "px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                    badge.innerText = "ONLINE";
+                } else {
+                    badge.className = "px-3 py-1 rounded-full text-xs font-semibold bg-rose-500/20 text-rose-400 border border-rose-500/30";
+                    badge.innerText = "OFFLINE";
+                }
+                document.getElementById('ea-last-seen').innerText = data.ea.lastSeen;
+                document.getElementById('ea-timeframe').innerText = data.ea.timeframe || 'M15';
+                document.getElementById('ea-last-executed').innerText = data.ea.lastExecuted || 'None';
+            }).catch(err => console.error("Telemetry sync error:", err));
+        }, 2000);
+
         function sendCommand(cmd) {
             const data = {
                 command: cmd,
@@ -204,14 +245,22 @@ HTML_TEMPLATE = """
 
 @app.route("/")
 def index():
-  return render_template_string(
-      HTML_TEMPLATE, state=bridge_state, ea=ea_heartbeat
-  )
+  state = load_state()
+  return render_template_string(HTML_TEMPLATE, state=state, ea=ea_heartbeat)
 
 
 @app.route("/api/bridge/command", methods=["GET"])
 def get_command():
-  return jsonify(bridge_state)
+  return jsonify(load_state())
+
+
+@app.route("/api/status", methods=["GET"])
+def get_status():
+  state = load_state()
+  current_time = int(datetime.utcnow().timestamp())
+  # Considered online if heartbeat received within the last 15 seconds
+  is_online = (current_time - ea_heartbeat.get("lastSeenEpoch", 0)) < 15
+  return jsonify({"state": state, "ea": ea_heartbeat, "online": is_online})
 
 
 @app.route("/api/bridge/heartbeat", methods=["POST"])
@@ -221,12 +270,13 @@ def post_heartbeat():
   if data:
     ea_heartbeat.update(data)
     ea_heartbeat["lastSeen"] = datetime.utcnow().strftime("%H:%M:%S UTC")
+    ea_heartbeat["lastSeenEpoch"] = int(datetime.utcnow().timestamp())
   return jsonify({"status": "success"})
 
 
 @app.route("/api/control", methods=["POST"])
 def update_control():
-  global bridge_state
+  state = load_state()
   data = request.get_json()
   if not data:
     return jsonify({"error": "No data provided"}), 400
@@ -242,10 +292,11 @@ def update_control():
       "account",
   ]:
     if key in data:
-      bridge_state[key] = data[key]
+      state[key] = data[key]
 
-  bridge_state["updatedAt"] = int(datetime.utcnow().timestamp())
-  return jsonify(bridge_state)
+  state["updatedAt"] = int(datetime.utcnow().timestamp())
+  save_state(state)
+  return jsonify(state)
 
 
 if __name__ == "__main__":
