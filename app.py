@@ -96,10 +96,8 @@ HTML_TEMPLATE = """
         <!-- Larger Custom Robot Head Logo Circle with Fallback -->
         <div class="flex flex-col items-center justify-center pt-2 pb-1 space-y-3">
             <div class="relative w-40 h-40 rounded-full bg-zinc-950 border-2 border-emerald-500/60 flex items-center justify-center shadow-[0_0_35px_rgba(16,185,129,0.35)] overflow-hidden">
-                <!-- User Image -->
                 <img src="/static/logo.png" alt="Neural Bot" class="w-full h-full object-cover object-[center_32%] scale-125" onerror="this.style.display='none'; document.getElementById('fallback-robot').style.display='flex';">
                 
-                <!-- Fallback Neon Icon if image is missing -->
                 <div id="fallback-robot" style="display:none;" class="absolute inset-0 bg-zinc-950 flex items-center justify-center">
                     <svg class="w-20 h-20 text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.9)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 3v2m6-2v2M4.5 9h15M6 9l1.5 9h9L18 9M9 13h1m4 0h1m-7 3h6" />
@@ -127,15 +125,15 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- Sleek Single Morphing Play/Pause Button (No Words, No Emojis) -->
+        <!-- Stable Samsung-Style Music Toggle Button -->
         <div class="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 shadow-lg flex flex-col items-center justify-center space-y-2">
-            <button id="engine-toggle-btn" onclick="toggleEngine()" class="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_25px_rgba(16,185,129,0.3)] active:scale-95 border-2">
-                <!-- Play Icon (Triangle) -->
-                <svg id="icon-play" class="w-8 h-8 fill-current translate-x-0.5" viewBox="0 0 24 24" style="display:none;">
+            <button id="engine-toggle-btn" onclick="toggleEngine()" class="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.2)] active:scale-95 border-2 border-zinc-800 bg-zinc-900 text-emerald-400">
+                <!-- Play Icon (Green Triangle) -->
+                <svg id="icon-play" class="w-8 h-8 fill-current translate-x-0.5 text-emerald-400" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z"/>
                 </svg>
                 <!-- Pause Icon (Bars) -->
-                <svg id="icon-pause" class="w-8 h-8 fill-current" viewBox="0 0 24 24" style="display:none;">
+                <svg id="icon-pause" class="w-8 h-8 fill-current text-zinc-200" viewBox="0 0 24 24" style="display:none;">
                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
                 </svg>
             </button>
@@ -223,9 +221,9 @@ HTML_TEMPLATE = """
 
     <script>
         let currentCommand = "{{ state.command }}";
+        let lastUserActionTime = 0; // Lock sync updates briefly to prevent race-condition snaps
 
         function updateButtonUI(cmd) {
-            const btn = document.getElementById('engine-toggle-btn');
             const iconPlay = document.getElementById('icon-play');
             const iconPause = document.getElementById('icon-pause');
             const statusText = document.getElementById('engine-status-text');
@@ -234,11 +232,9 @@ HTML_TEMPLATE = """
             statusText.innerText = cmd;
 
             if (cmd === 'PLAY') {
-                btn.className = "w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_30px_rgba(16,185,129,0.6)] active:scale-95 border-2 border-emerald-400 bg-emerald-500 text-black";
                 iconPlay.style.display = 'none';
                 iconPause.style.display = 'block';
             } else {
-                btn.className = "w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_20px_rgba(244,63,94,0.3)] active:scale-95 border-2 border-zinc-700 bg-zinc-900 text-zinc-400";
                 iconPlay.style.display = 'block';
                 iconPause.style.display = 'none';
             }
@@ -248,6 +244,8 @@ HTML_TEMPLATE = """
 
         function toggleEngine() {
             const nextCmd = (currentCommand === 'PLAY') ? 'PAUSE' : 'PLAY';
+            lastUserActionTime = Date.now(); // Lock polling overrides for 3 seconds
+            updateButtonUI(nextCmd);
             sendCommand(nextCmd);
         }
 
@@ -265,6 +263,9 @@ HTML_TEMPLATE = """
         }
 
         setInterval(() => {
+            // Skip status override if user recently clicked the button manually
+            if (Date.now() - lastUserActionTime < 3000) return;
+
             fetch('/api/status')
             .then(res => res.json())
             .then(data => {
@@ -288,7 +289,6 @@ HTML_TEMPLATE = """
         }, 2000);
 
         function sendCommand(cmd) {
-            updateButtonUI(cmd);
             const data = {
                 command: cmd,
                 strategy: document.getElementById('strategy').value,
@@ -311,7 +311,7 @@ HTML_TEMPLATE = """
             });
         }
 
-        function saveConfig() {
+    function saveConfig() {
             sendCommand(currentCommand);
         }
     </script>
