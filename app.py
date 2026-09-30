@@ -1,12 +1,13 @@
 from datetime import datetime
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template_string, request
 
 app = Flask(__name__)
 
 # Global state that the EA polls and the web app controls
 bridge_state = {
-    "command": "STOP",  # START, STOP, BUY, SELL, CONFIG
+    "command": "STOP",
     "symbol": "XAUUSD",
+    "timeframe": "M15",
     "strategy": "PURE_EXECUTION",
     "lotSize": 0.01,
     "stopLoss": 100.0,
@@ -31,12 +32,19 @@ ea_heartbeat = {
 
 @app.route("/")
 def index():
-  return render_template("index.html", state=bridge_state, ea=ea_heartbeat)
+  try:
+    with open("template", "r", encoding="utf-8") as f:
+      html_content = f.read()
+  except FileNotFoundError:
+    html_content = "<h1>Error: 'template' file not found in root directory.</h1>"
+
+  return render_template_string(
+      html_content, state=bridge_state, ea=ea_heartbeat
+  )
 
 
 @app.route("/api/bridge/command", methods=["GET"])
 def get_command():
-  # EA polls this endpoint to check what it should do
   return jsonify(bridge_state)
 
 
@@ -57,10 +65,10 @@ def update_control():
   if not data:
     return jsonify({"error": "No data provided"}), 400
 
-  # Update state parameters sent from the web dashboard
   for key in [
       "command",
       "symbol",
+      "timeframe",
       "strategy",
       "lotSize",
       "stopLoss",
@@ -70,7 +78,6 @@ def update_control():
     if key in data:
       bridge_state[key] = data[key]
 
-  # Update timestamp so the EA knows a new command/config change occurred
   bridge_state["updatedAt"] = int(datetime.utcnow().timestamp())
   return jsonify(bridge_state)
 
