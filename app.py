@@ -7,22 +7,40 @@ app = Flask(__name__)
 
 STATE_FILE = "bridge_state.json"
 
-# 18 Advanced Strategies with Optimal Timeframes
+# Professional Trading Strategies
 STRATEGIES = {
-    "PURE_EXECUTION": {"name": "Pure Execution (Instant/Manual)", "timeframe": "Current"},
-    "THREE_STEP_SCALPER": {"name": "3-Step Amapiano Scalper", "timeframe": "M1"},
-    "SGIJA_BOUNCE": {"name": "Sgija Momentum Scalper", "timeframe": "M1"},
-    "PRIVATE_SCHOOL_TREND": {"name": "Private School Trend Following", "timeframe": "H1"},
-    "SUPPORT_RESISTANCE": {"name": "Support & Resistance Rejection", "timeframe": "M15"},
-    "MA_CROSSOVER": {"name": "Moving Average Crossover (Fast)", "timeframe": "M30"},
-    "BOLLINGER_SQUEEZE": {"name": "Bollinger Band Squeeze Breakout", "timeframe": "M5"},
-    "RSI_REVERSAL": {"name": "RSI Overbought/Oversold Reversal", "timeframe": "M15"},
+    "PURE_EXECUTION": {
+        "name": "Pure Execution (Manual Buttons)",
+        "timeframe": "Current",
+    },
+    "THREE_STEP_SCALPER": {
+        "name": "Micro-Momentum Scalper",
+        "timeframe": "M1",
+    },
+    "SGIJA_BOUNCE": {"name": "Volatility Breakout Scalper", "timeframe": "M1"},
+    "PRIVATE_SCHOOL_TREND": {"name": "Macro Trend Follower", "timeframe": "H1"},
+    "SUPPORT_RESISTANCE": {
+        "name": "Support & Resistance Reversal",
+        "timeframe": "M15",
+    },
+    "MA_CROSSOVER": {"name": "Dual Moving Average Crossover", "timeframe": "M30"},
+    "BOLLINGER_SQUEEZE": {
+        "name": "Bollinger Band Volatility Squeeze",
+        "timeframe": "M5",
+    },
+    "RSI_REVERSAL": {"name": "RSI Mean Reversion", "timeframe": "M15"},
     "MACD_MOMENTUM": {"name": "MACD Histogram Momentum", "timeframe": "M15"},
-    "EMA_RIBBON_SCALP": {"name": "EMA Ribbon Scalper", "timeframe": "M1"},
+    "EMA_RIBBON_SCALP": {"name": "EMA Ribbon Trend Scalp", "timeframe": "M1"},
     "LONDON_BREAKOUT": {"name": "London Open Session Breakout", "timeframe": "M5"},
-    "NEW_YORK_MOMENTUM": {"name": "New York Session Momentum", "timeframe": "M15"},
-    "ASIAN_RANGE": {"name": "Asian Range Box Breakout", "timeframe": "M15"},
-    "FIBONACCI_PULLBACK": {"name": "Fibonacci 61.8% Retracement", "timeframe": "H1"},
+    "NEW_YORK_MOMENTUM": {
+        "name": "New York Session Momentum",
+        "timeframe": "M15",
+    },
+    "ASIAN_RANGE": {"name": "Asian Range Breakout", "timeframe": "M15"},
+    "FIBONACCI_PULLBACK": {
+        "name": "Fibonacci 61.8% Retracement",
+        "timeframe": "H1",
+    },
     "VWAP_BOUNCE": {"name": "VWAP Institutional Bounce", "timeframe": "M5"},
     "SUPERTREND_FOLLOW": {"name": "Supertrend Directional Follow", "timeframe": "H1"},
     "STOCHASTIC_SCALP": {"name": "Stochastic Fast Scalper", "timeframe": "M1"},
@@ -36,7 +54,6 @@ default_state = {
     "strategy": "PURE_EXECUTION",
     "lotSize": 0.01,
     "maxTrades": 1,
-    "account": "DEMO",
     "updatedAt": 0,
 }
 
@@ -62,11 +79,8 @@ if not os.path.exists(STATE_FILE):
 ea_heartbeat = {
     "pair": "DTAY89",
     "symbol": "XAUUSD",
-    "timeframe": "M15",
     "strategy": "PURE_EXECUTION",
-    "account": "DEMO",
     "enabled": False,
-    "lastCommand": "",
     "lastExecuted": "None",
     "lastSeen": "Never",
     "lastSeenEpoch": 0,
@@ -120,15 +134,26 @@ HTML_TEMPLATE = """
         <!-- Stable Samsung-Style Music Toggle Button -->
         <div class="bg-zinc-950 border border-zinc-900 rounded-2xl p-4 shadow-lg flex flex-col items-center justify-center space-y-2">
             <button id="engine-toggle-btn" onclick="toggleEngine()" class="w-20 h-20 rounded-full flex items-center justify-center transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.2)] active:scale-95 border-2 border-zinc-800 bg-zinc-900 text-emerald-400">
-                <!-- Play Icon (Green Triangle) -->
                 <svg id="icon-play" class="w-8 h-8 fill-current translate-x-0.5 text-emerald-400" viewBox="0 0 24 24">
                     <path d="M8 5v14l11-7z"/>
                 </svg>
-                <!-- Pause Icon (Bars) -->
                 <svg id="icon-pause" class="w-8 h-8 fill-current text-zinc-200" viewBox="0 0 24 24" style="display:none;">
                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/>
                 </svg>
             </button>
+        </div>
+
+        <!-- Manual Buy / Sell Panel (Only visible for Pure Execution) -->
+        <div id="manual-execution-panel" class="bg-zinc-950 border border-emerald-500/30 rounded-2xl p-4 shadow-lg space-y-2">
+            <div class="text-xs font-semibold text-emerald-400 uppercase tracking-wider text-center mb-2">Pure Execution Manual Controls</div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="sendManualAction('MANUAL_BUY')" class="w-full bg-emerald-600 hover:bg-emerald-500 text-black font-extrabold py-3 rounded-xl transition text-xs tracking-wider shadow-[0_0_15px_rgba(16,185,129,0.4)]">
+                    BUY 🟢
+                </button>
+                <button onclick="sendManualAction('MANUAL_SELL')" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-extrabold py-3 rounded-xl transition text-xs tracking-wider shadow-[0_0_15px_rgba(244,63,94,0.4)]">
+                    SELL 🔴
+                </button>
+            </div>
         </div>
 
         <!-- Strategy & Parameters Settings Panel -->
@@ -150,29 +175,15 @@ HTML_TEMPLATE = """
                         <label class="block text-[10px] text-zinc-500 mb-1">Symbol</label>
                         <input type="text" id="symbol" value="{{ state.symbol }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono uppercase text-center">
                     </div>
-                    <div id="timeframe-container">
-                        <label class="block text-[10px] text-zinc-500 mb-1">Timeframe</label>
-                        <select id="timeframe" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
-                            <option value="M1" {% if state.timeframe == 'M1' %}selected{% endif %}>M1</option>
-                            <option value="M5" {% if state.timeframe == 'M5' %}selected{% endif %}>M5</option>
-                            <option value="M15" {% if state.timeframe == 'M15' %}selected{% endif %}>M15</option>
-                            <option value="M30" {% if state.timeframe == 'M30' %}selected{% endif %}>M30</option>
-                            <option value="H1" {% if state.timeframe == 'H1' %}selected{% endif %}>H1</option>
-                            <option value="H4" {% if state.timeframe == 'H4' %}selected{% endif %}>H4</option>
-                            <option value="D1" {% if state.timeframe == 'D1' %}selected{% endif %}>D1</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block text-[10px] text-zinc-500 mb-1">Lot Size</label>
                         <input type="number" step="0.01" id="lotSize" value="{{ state.lotSize }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
                     </div>
-                    <div>
-                        <label class="block text-[10px] text-zinc-500 mb-1">Max Trades</label>
-                        <input type="number" id="maxTrades" value="{{ state.maxTrades }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
-                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-zinc-500 mb-1">Max Trades</label>
+                    <input type="number" id="maxTrades" value="{{ state.maxTrades }}" class="w-full bg-black border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono text-center">
                 </div>
 
                 <button onclick="saveConfig()" class="w-full bg-zinc-900 hover:bg-zinc-800 text-emerald-400 font-bold py-3 rounded-xl border border-emerald-500/30 transition text-xs tracking-wider shadow-sm">
@@ -230,22 +241,13 @@ HTML_TEMPLATE = """
             sendCommand(nextCmd);
         }
 
-        const strategyTimeframes = {
-            {% for key, val in strategies.items() %}
-            "{{ key }}": "{{ val.timeframe }}",
-            {% endfor %}
-        };
-
         function handleStrategyChange() {
             const strat = document.getElementById('strategy').value;
-            const tfContainer = document.getElementById('timeframe-container');
+            const manualPanel = document.getElementById('manual-execution-panel');
             if (strat === 'PURE_EXECUTION') {
-                tfContainer.style.display = 'none';
+                manualPanel.style.display = 'block';
             } else {
-                tfContainer.style.display = 'block';
-                if (strategyTimeframes[strat]) {
-                    document.getElementById('timeframe').value = strategyTimeframes[strat];
-                }
+                manualPanel.style.display = 'none';
             }
         }
 
@@ -272,7 +274,7 @@ HTML_TEMPLATE = """
                 document.getElementById('stat-symbol').innerText = data.state.symbol || 'XAUUSD';
                 document.getElementById('stat-max-trades').innerText = data.state.maxTrades || 1;
                 
-                if (data.state.command && data.state.command !== currentCommand) {
+                if (data.state.command && data.state.command !== currentCommand && data.state.command !== 'MANUAL_BUY' && data.state.command !== 'MANUAL_SELL') {
                     updateButtonUI(data.state.command);
                 }
             }).catch(err => console.error("Telemetry sync error:", err));
@@ -289,21 +291,20 @@ HTML_TEMPLATE = """
                 command: cmd,
                 strategy: document.getElementById('strategy').value,
                 symbol: sym,
-                timeframe: document.getElementById('timeframe').value,
                 lotSize: parseFloat(document.getElementById('lotSize').value),
-                maxTrades: parseInt(maxT),
-                account: document.getElementById('account').value
+                maxTrades: parseInt(maxT)
             };
 
             fetch('/api/control', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
-            })
-            .then(res => res.json())
-            .then(response => {
-                console.log("Command sent: " + cmd);
             });
+        }
+
+        function sendManualAction(actionCmd) {
+            lastUserActionTime = Date.now();
+            sendCommand(actionCmd);
         }
 
         function saveConfig() {
@@ -355,15 +356,7 @@ def update_control():
   if not data:
     return jsonify({"error": "No data provided"}), 400
 
-  for key in [
-      "command",
-      "symbol",
-      "timeframe",
-      "strategy",
-      "lotSize",
-      "maxTrades",
-      "account",
-  ]:
+  for key in ["command", "symbol", "strategy", "lotSize", "maxTrades"]:
     if key in data:
       state[key] = data[key]
 
