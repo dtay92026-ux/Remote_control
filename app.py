@@ -8,14 +8,12 @@ app = Flask(__name__)
 STATE_FILE = "bridge_state.json"
 
 STRATEGIES = {
-    "PURE_EXECUTION": {
-        "name": "Pure M15 Rejection/Engulfing Scalper",
-        "timeframe": "M15",
-    },
-    "SUPPORT_RESISTANCE": {
-        "name": "Support & Resistance Reversal",
-        "timeframe": "M15",
-    },
+    "PURE_EXECUTION": "Pure Price Action Rejection & Engulfing",
+    "SUPPORT_RESISTANCE": "Support & Resistance Zone Reversal",
+    "EMA_CROSSOVER": "Exponential Moving Average Trend Crossover",
+    "RSI_EXTREME": "Relative Strength Index Mean Reversion",
+    "MACD_MOMENTUM": "MACD Momentum Breakout",
+    "ATR_BREAKOUT": "Average True Range Volatility Breakout",
 }
 
 default_state = {
@@ -110,7 +108,7 @@ HTML_TEMPLATE = """
             </button>
         </div>
 
-        <!-- LIVE TELEMETRY & EXECUTION LOG PANEL (POSITIONED BETWEEN ENGINE & PLUS BUTTON) -->
+        <!-- LIVE TELEMETRY & EXECUTION LOG PANEL -->
         <div class="w-full bg-zinc-950 border border-zinc-900 rounded-3xl p-5 shadow-xl space-y-3 font-mono text-xs">
             <div class="flex justify-between items-center border-b border-zinc-900 pb-2">
                 <span class="text-zinc-500 uppercase tracking-wider text-[10px]">Live Telemetry Log</span>
@@ -147,7 +145,7 @@ HTML_TEMPLATE = """
         </button>
     </div>
 
-    <!-- CONFIGURATION MODAL (SLIDE-OVER / POPUP) -->
+    <!-- CONFIGURATION MODAL -->
     <div id="config-modal" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4" style="display:none;">
         <div class="w-full max-w-sm bg-zinc-950 border border-emerald-500/30 rounded-3xl p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b border-zinc-900 pb-3">
@@ -159,21 +157,25 @@ HTML_TEMPLATE = """
                 <div>
                     <label class="block text-[11px] text-zinc-400 mb-1 font-mono">Strategy Matrix</label>
                     <select id="strategy" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
-                        <option value="PURE_EXECUTION">Pure M15 Rejection / Engulfing (M15)</option>
-                        <option value="SUPPORT_RESISTANCE">Support & Resistance Reversal (M15)</option>
+                        <option value="PURE_EXECUTION">Pure Price Action Rejection & Engulfing</option>
+                        <option value="SUPPORT_RESISTANCE">Support & Resistance Zone Reversal</option>
+                        <option value="EMA_CROSSOVER">Exponential Moving Average Trend Crossover</option>
+                        <option value="RSI_EXTREME">Relative Strength Index Mean Reversion</option>
+                        <option value="MACD_MOMENTUM">MACD Momentum Breakout</option>
+                        <option value="ATR_BREAKOUT">Average True Range Volatility Breakout</option>
                     </select>
                 </div>
 
                 <div>
                     <label class="block text-[11px] text-zinc-400 mb-1 font-mono">Timeframe Selector</label>
                     <select id="timeframe" class="w-full bg-black border border-zinc-800 rounded-xl p-3 text-zinc-200 focus:outline-none focus:border-emerald-500 font-mono">
-                        <option value="M1">M1 (1 Minute)</option>
-                        <option value="M5">M5 (5 Minutes)</option>
-                        <option value="M15">M15 (15 Minutes)</option>
-                        <option value="M30">M30 (30 Minutes)</option>
-                        <option value="H1">H1 (1 Hour)</option>
-                        <option value="H4">H4 (4 Hours)</option>
-                        <option value="D1">D1 (Daily)</option>
+                        <option value="M1">M1</option>
+                        <option value="M5">M5</option>
+                        <option value="M15">M15</option>
+                        <option value="M30">M30</option>
+                        <option value="H1">H1</option>
+                        <option value="H4">H4</option>
+                        <option value="D1">D1</option>
                     </select>
                 </div>
 
