@@ -1,25 +1,28 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from flask import Flask, jsonify, render_template_string, request
 import os
 
 app = Flask(__name__)
 
-# Bridge Configuration state
+# SAST Timezone (UTC+2)
+SAST = timezone(timedelta(hours=2))
+
+# Bridge Configuration state (Defaults to PAUSE on launch)
 bridge_state = {
     "symbol": "XAUUSD",
     "strategy": "PURE_EXECUTION",
     "timeframe": "M5",
     "lotSize": 0.01,
     "maxTrades": 2,
-    "command": "PLAY",
+    "command": "PAUSE",
 }
 
 ea_heartbeat = {
     "pair": "DTAY89",
     "symbol": "XAUUSD",
     "strategy": "PURE_EXECUTION",
-    "enabled": True,
-    "lastExecuted": "PLAY ACTIVE",
+    "enabled": False,
+    "lastExecuted": "PAUSED",
     "lastSeen": "Never",
 }
 
@@ -119,9 +122,9 @@ HTML_TEMPLATE = """
 
         <!-- Center Running Circle -->
         <div class="circle-container">
-            <div id="runCircle" class="run-circle" onclick="togglePlayPause()">
-                <div id="playIcon" class="play-icon">&#9658;</div>
-                <div id="runText" class="run-text">RUNNING</div>
+            <div id="runCircle" class="run-circle paused" onclick="togglePlayPause()">
+                <div id="playIcon" class="play-icon">&#10074;&#10074;</div>
+                <div id="runText" class="run-text">PAUSED</div>
             </div>
         </div>
 
@@ -139,12 +142,12 @@ HTML_TEMPLATE = """
         <div class="telemetry-card">
             <div class="telemetry-header">
                 <span>LIVE TELEMETRY LOG</span>
-                <span id="utcTime">--:--:-- UTC</span>
+                <span id="sastTime">--:--:-- SAST</span>
             </div>
 
             <div class="telemetry-row">
                 <span class="telemetry-label">Engine Command:</span>
-                <span id="lblCommand" class="telemetry-value">PLAY</span>
+                <span id="lblCommand" class="telemetry-value">PAUSE</span>
             </div>
             <div class="telemetry-row">
                 <span class="telemetry-label">Active Symbol:</span>
@@ -165,7 +168,7 @@ HTML_TEMPLATE = """
 
             <div class="execution-status-box">
                 <div>Execution Status:</div>
-                <div id="lblExec" class="execution-status-text">PLAY ACTIVE</div>
+                <div id="lblExec" class="execution-status-text">PAUSED</div>
             </div>
         </div>
 
@@ -218,28 +221,24 @@ HTML_TEMPLATE = """
     </div>
 
     <script>
-        let isModalEditing = false;
-
-        function updateUtcClock() {
+        function updateSastClock() {
             const now = new Date();
-            document.getElementById('utcTime').innerText = now.toUTCString().split(' ')[4] + ' UTC';
+            const timeStr = now.toLocaleTimeString('en-ZA', { timeZone: 'Africa/Johannesburg', hour12: false });
+            document.getElementById('sastTime').innerText = timeStr + ' SAST';
         }
-        setInterval(updateUtcClock, 1000);
-        updateUtcClock();
+        setInterval(updateSastClock, 1000);
+        updateSastClock();
 
         function openConfigModal() {
-            // Pre-fill inputs with active values before opening
             document.getElementById('cfgSymbol').value = document.getElementById('lblSymbol').innerText;
             document.getElementById('cfgStrategy').value = document.getElementById('lblStrategy').innerText;
             document.getElementById('cfgTimeframe').value = document.getElementById('lblTf').innerText;
             document.getElementById('cfgLotSize').value = document.getElementById('lblLot').innerText;
             
-            isModalEditing = true;
             document.getElementById('configModal').style.display = 'flex';
         }
 
         function closeConfigModal() {
-            isModalEditing = false;
             document.getElementById('configModal').style.display = 'none';
         }
 
@@ -299,9 +298,18 @@ HTML_TEMPLATE = """
             document.getElementById('lblTf').innerText = bridge.timeframe;
             document.getElementById('lblLot').innerText = bridge.lotSize;
 
+            const execLbl = document.getElementById('lblExec');
+            if (hb && hb.lastExecuted && hb.lastExecuted !== 'None') {
+                execLbl.innerText = hb.lastExecuted;
+            } else if (bridge.command === 'PLAY' || bridge.command === 'RUNNING') {
+                execLbl.innerText = 'PLAY ACTIVE';
+            } else if (bridge.command === 'PAUSE' || bridge.command === 'PAUSED') {
+                execLbl.innerText = 'PAUSED';
+            } else {
+                execLbl.innerText = bridge.command + ' EXECUTED';
+            }
+
             if (hb) {
-                document.getElementById('lblExec').innerText = hb.lastExecuted || (bridge.command + ' ACTIVE');
-                
                 const badge = document.getElementById('connectionBadge');
                 if(hb.lastSeen && hb.lastSeen !== 'Never') {
                     badge.className = 'status-badge';
@@ -344,7 +352,6 @@ def index():
   return render_template_string(HTML_TEMPLATE, strategies=SUPPORTED_STRATEGIES)
 
 
-# EA Polling Endpoint: Returns direct flat JSON object so MT5/cTrader EA reads parameters at root
 @app.route("/api/bridge/command", methods=["GET"])
 def get_command():
   return jsonify(bridge_state)
@@ -352,11 +359,23 @@ def get_command():
 
 @app.route("/api/bridge/command", methods=["POST"])
 def post_command():
-  global bridge_state
+  global bridge_state, ea_heartbeat
   data = request.get_json(force=True, silent=True) or {}
   for key in ["symbol", "strategy", "timeframe", "lotSize", "maxTrades", "command"]:
     if key in data and data[key] is not None:
       bridge_state[key] = data[key]
+
+  if "command" in data:
+    cmd = data["command"]
+    if cmd == "MANUAL_BUY":
+      ea_heartbeat["lastExecuted"] = "MANUAL BUY EXECUTED"
+    elif cmd == "MANUAL_SELL":
+      ea_heartbeat["lastExecuted"] = "MANUAL SELL EXECUTED"
+    elif cmd in ["PAUSE", "PAUSED"]:
+      ea_heartbeat["lastExecuted"] = "PAUSED"
+    elif cmd in ["PLAY", "RUNNING"]:
+      ea_heartbeat["lastExecuted"] = "PLAY ACTIVE"
+
   return jsonify(
       {"status": "success", "bridge": bridge_state, "heartbeat": ea_heartbeat}
   )
@@ -369,9 +388,7 @@ def post_heartbeat():
   if data:
     for k, v in data.items():
       ea_heartbeat[k] = v
-    ea_heartbeat["lastSeen"] = datetime.now(timezone.utc).strftime(
-        "%H:%M:%S UTC"
-    )
+    ea_heartbeat["lastSeen"] = datetime.now(SAST).strftime("%H:%M:%S SAST")
 
   return jsonify({
       "status": "success",
