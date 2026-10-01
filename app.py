@@ -28,22 +28,10 @@ ea_heartbeat = {
 
 # All 17 Professional Strategies
 SUPPORTED_STRATEGIES = [
-    "PURE_EXECUTION",
-    "TREND_BREAKOUT",
-    "RANGE_REVERSAL",
-    "SUPPORT_RESISTANCE",
-    "EMA_CROSSOVER",
-    "RSI_EXTREME",
-    "MACD_MOMENTUM",
-    "ATR_BREAKOUT",
-    "BOLLINGER_BOUNCE",
-    "STOCHASTIC_EXTREME",
-    "PARABOLIC_SAR",
-    "CCI_EXTREME",
-    "WILLIAMS_R",
-    "MOMENTUM_OSCILLATOR",
-    "SUPER_TREND",
-    "VWAP_BOUNCE",
+    "PURE_EXECUTION", "TREND_BREAKOUT", "RANGE_REVERSAL", "SUPPORT_RESISTANCE",
+    "EMA_CROSSOVER", "RSI_EXTREME", "MACD_MOMENTUM", "ATR_BREAKOUT",
+    "BOLLINGER_BOUNCE", "STOCHASTIC_EXTREME", "PARABOLIC_SAR", "CCI_EXTREME",
+    "WILLIAMS_R", "MOMENTUM_OSCILLATOR", "SUPER_TREND", "VWAP_BOUNCE",
     "ICHIMOKU_BREAKOUT",
 ]
 
@@ -58,13 +46,11 @@ HTML_TEMPLATE = """
         body { background-color: #050805; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 15px; display: flex; justify-content: center; }
         .app-container { width: 100%; max-width: 480px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
         
-        /* Header */
         .header { display: flex; justify-content: space-between; align-items: center; padding: 10px 5px; font-size: 14px; font-weight: bold; letter-spacing: 0.5px; }
         .header-title { color: #00ff66; display: flex; align-items: center; gap: 8px; }
         .status-badge { font-size: 11px; padding: 4px 12px; border-radius: 12px; font-weight: bold; background: #0b1f13; border: 1px solid #00ff66; color: #00ff66; }
         .status-offline { background: #1f0b0b; border-color: #ff3333; color: #ff3333; }
 
-        /* Main Run Circle Button */
         .circle-container { display: flex; justify-content: center; margin: 10px 0; }
         .run-circle { width: 180px; height: 180px; border-radius: 50%; background: #0c140e; border: 2px solid #00ff66; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 25px rgba(0, 255, 102, 0.2); transition: all 0.2s ease; }
         .run-circle.paused { border-color: #ffaa00; box-shadow: 0 0 25px rgba(255, 170, 0, 0.2); }
@@ -73,18 +59,6 @@ HTML_TEMPLATE = """
         .run-text { font-size: 14px; font-weight: bold; color: #00ff66; letter-spacing: 1px; }
         .paused .run-text { color: #ffaa00; }
 
-        /* Force Buy / Sell Buttons */
-        .action-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .btn-action { padding: 16px; border-radius: 12px; font-weight: bold; font-size: 13px; letter-spacing: 0.5px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .btn-force-buy { background: #0b2214; border: 1px solid #00ff66; color: #00ff66; }
-        .btn-force-buy:active { background: #123820; }
-        .btn-force-sell { background: #220b0b; border: 1px solid #ff3333; color: #ff3333; }
-        .btn-force-sell:active { background: #381212; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; }
-        .dot-green { background: #00ff66; box-shadow: 0 0 8px #00ff66; }
-        .dot-red { background: #ff3333; box-shadow: 0 0 8px #ff3333; }
-
-        /* Telemetry Log Card */
         .telemetry-card { background: #0c110e; border: 1px solid #1a2e20; border-radius: 16px; padding: 20px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
         .telemetry-header { display: flex; justify-content: space-between; align-items: center; font-size: 11px; color: #6b7280; letter-spacing: 1px; margin-bottom: 15px; border-bottom: 1px solid #142217; padding-bottom: 8px; }
         
@@ -95,11 +69,9 @@ HTML_TEMPLATE = """
         .execution-status-box { margin-top: 15px; border: 1px solid #1a2e20; border-radius: 10px; padding: 12px; background: #050805; font-size: 11px; color: #6b7280; }
         .execution-status-text { margin-top: 4px; color: #00ff66; font-weight: bold; font-size: 12px; letter-spacing: 0.5px; }
 
-        /* Floating Action Button (+) Opens Config Settings */
         .fab-container { display: flex; justify-content: center; margin-top: 10px; }
         .fab-btn { width: 44px; height: 44px; border-radius: 50%; background: #0b2214; border: 1px solid #00ff66; color: #00ff66; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 15px rgba(0, 255, 102, 0.3); }
 
-        /* Configuration Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; }
         .modal-content { background: #0c110e; border: 1px solid #00ff66; border-radius: 16px; padding: 25px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; max-height: 90vh; overflow-y: auto; }
         .modal-title { color: #00ff66; font-size: 16px; font-weight: bold; border-bottom: 1px solid #1a2e20; padding-bottom: 8px; }
@@ -128,16 +100,6 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- Force Buy / Sell Buttons -->
-        <div class="action-buttons">
-            <button class="btn-action btn-force-buy" onclick="sendAction('MANUAL_BUY')">
-                FORCE BUY <span class="dot dot-green"></span>
-            </button>
-            <button class="btn-action btn-force-sell" onclick="sendAction('MANUAL_SELL')">
-                FORCE SELL <span class="dot dot-red"></span>
-            </button>
-        </div>
-
         <!-- Live Telemetry Log Card -->
         <div class="telemetry-card">
             <div class="telemetry-header">
@@ -164,6 +126,10 @@ HTML_TEMPLATE = """
             <div class="telemetry-row">
                 <span class="telemetry-label">Lot Size:</span>
                 <span id="lblLot" class="telemetry-value">0.01</span>
+            </div>
+            <div class="telemetry-row">
+                <span class="telemetry-label">Max Trades:</span>
+                <span id="lblMaxTrades" class="telemetry-value">2</span>
             </div>
 
             <div class="execution-status-box">
@@ -234,6 +200,7 @@ HTML_TEMPLATE = """
             document.getElementById('cfgStrategy').value = document.getElementById('lblStrategy').innerText;
             document.getElementById('cfgTimeframe').value = document.getElementById('lblTf').innerText;
             document.getElementById('cfgLotSize').value = document.getElementById('lblLot').innerText;
+            document.getElementById('cfgMaxTrades').value = document.getElementById('lblMaxTrades').innerText;
             
             document.getElementById('configModal').style.display = 'flex';
         }
@@ -246,10 +213,6 @@ HTML_TEMPLATE = """
             const currentCmd = document.getElementById('lblCommand').innerText;
             const newCmd = (currentCmd === 'PLAY' || currentCmd === 'RUNNING') ? 'PAUSE' : 'PLAY';
             sendPost({ command: newCmd });
-        }
-
-        function sendAction(action) {
-            sendPost({ command: action });
         }
 
         function saveConfig() {
@@ -297,6 +260,7 @@ HTML_TEMPLATE = """
             document.getElementById('lblStrategy').innerText = bridge.strategy;
             document.getElementById('lblTf').innerText = bridge.timeframe;
             document.getElementById('lblLot').innerText = bridge.lotSize;
+            document.getElementById('lblMaxTrades').innerText = bridge.maxTrades;
 
             const execLbl = document.getElementById('lblExec');
             if (hb && hb.lastExecuted && hb.lastExecuted !== 'None') {
@@ -349,69 +313,63 @@ HTML_TEMPLATE = """
 
 @app.route("/")
 def index():
-  return render_template_string(HTML_TEMPLATE, strategies=SUPPORTED_STRATEGIES)
+    return render_template_string(HTML_TEMPLATE, strategies=SUPPORTED_STRATEGIES)
 
 
 @app.route("/api/bridge/command", methods=["GET"])
 def get_command():
-  return jsonify(bridge_state)
+    return jsonify(bridge_state)
 
 
 @app.route("/api/bridge/command", methods=["POST"])
 def post_command():
-  global bridge_state, ea_heartbeat
-  data = request.get_json(force=True, silent=True) or {}
-  for key in ["symbol", "strategy", "timeframe", "lotSize", "maxTrades", "command"]:
-    if key in data and data[key] is not None:
-      bridge_state[key] = data[key]
+    global bridge_state, ea_heartbeat
+    data = request.get_json(force=True, silent=True) or {}
+    for key in ["symbol", "strategy", "timeframe", "lotSize", "maxTrades", "command"]:
+        if key in data and data[key] is not None:
+            bridge_state[key] = data[key]
 
-  if "command" in data:
-    cmd = data["command"]
-    if cmd == "MANUAL_BUY":
-      ea_heartbeat["lastExecuted"] = "MANUAL BUY EXECUTED"
-    elif cmd == "MANUAL_SELL":
-      ea_heartbeat["lastExecuted"] = "MANUAL SELL EXECUTED"
-    elif cmd in ["PAUSE", "PAUSED"]:
-      ea_heartbeat["lastExecuted"] = "PAUSED"
-    elif cmd in ["PLAY", "RUNNING"]:
-      ea_heartbeat["lastExecuted"] = "PLAY ACTIVE"
+    if "command" in data:
+        cmd = data["command"]
+        if cmd in ["PAUSE", "PAUSED"]:
+            ea_heartbeat["lastExecuted"] = "PAUSED"
+        elif cmd in ["PLAY", "RUNNING"]:
+            ea_heartbeat["lastExecuted"] = "PLAY ACTIVE"
 
-  return jsonify(
-      {"status": "success", "bridge": bridge_state, "heartbeat": ea_heartbeat}
-  )
+    return jsonify({"status": "success", "bridge": bridge_state, "heartbeat": ea_heartbeat})
 
 
 @app.route("/api/bridge/heartbeat", methods=["POST"])
 def post_heartbeat():
-  global ea_heartbeat, bridge_state
-  data = request.get_json(force=True, silent=True) or {}
-  if data:
-    for k, v in data.items():
-      ea_heartbeat[k] = v
-    ea_heartbeat["lastSeen"] = datetime.now(SAST).strftime("%H:%M:%S SAST")
+    global ea_heartbeat, bridge_state
+    data = request.get_json(force=True, silent=True) or {}
+    if data:
+        for k, v in data.items():
+            ea_heartbeat[k] = v
+        ea_heartbeat["lastSeen"] = datetime.now(SAST).strftime("%H:%M:%S SAST")
 
-  return jsonify({
-      "status": "success",
-      "command": bridge_state["command"],
-      "strategy": bridge_state["strategy"],
-      "symbol": bridge_state["symbol"],
-      "timeframe": bridge_state["timeframe"],
-      "lotSize": bridge_state["lotSize"],
-      "maxTrades": bridge_state["maxTrades"],
-      "bridge": bridge_state,
-      "heartbeat": ea_heartbeat,
-  })
+    return jsonify({
+        "status": "success",
+        "command": bridge_state["command"],
+        "strategy": bridge_state["strategy"],
+        "symbol": bridge_state["symbol"],
+        "timeframe": bridge_state["timeframe"],
+        "lotSize": bridge_state["lotSize"],
+        "maxTrades": bridge_state["maxTrades"],
+        "bridge": bridge_state,
+        "heartbeat": ea_heartbeat,
+    })
 
 
 @app.route("/api/status", methods=["GET"])
 def get_status():
-  return jsonify({
-      "bridge": bridge_state,
-      "heartbeat": ea_heartbeat,
-      "supported_strategies": SUPPORTED_STRATEGIES,
-  })
+    return jsonify({
+        "bridge": bridge_state,
+        "heartbeat": ea_heartbeat,
+        "supported_strategies": SUPPORTED_STRATEGIES,
+    })
 
 
 if __name__ == "__main__":
-  port = int(os.environ.get("PORT", 5000))
-  app.run(host="0.0.0.0", port=port)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
