@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# Bridge Configuration state (TP, SL, and risk removed)
+# Bridge Configuration state
 bridge_state = {
     "symbol": "XAUUSD",
     "strategy": "PURE_EXECUTION",
@@ -44,7 +44,6 @@ SUPPORTED_STRATEGIES = [
     "ICHIMOKU_BREAKOUT",
 ]
 
-# UI Template with strategy configured in the modal and displayed cleanly in the telemetry log
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -126,7 +125,7 @@ HTML_TEMPLATE = """
             </div>
         </div>
 
-        <!-- Force Buy / Sell -->
+        <!-- Force Buy / Sell Buttons -->
         <div class="action-buttons">
             <button class="btn-action btn-force-buy" onclick="sendAction('MANUAL_BUY')">
                 FORCE BUY <span class="dot dot-green"></span>
@@ -136,7 +135,7 @@ HTML_TEMPLATE = """
             </button>
         </div>
 
-        <!-- Telemetry Log Card -->
+        <!-- Live Telemetry Log Card -->
         <div class="telemetry-card">
             <div class="telemetry-header">
                 <span>LIVE TELEMETRY LOG</span>
@@ -219,6 +218,8 @@ HTML_TEMPLATE = """
     </div>
 
     <script>
+        let isModalEditing = false;
+
         function updateUtcClock() {
             const now = new Date();
             document.getElementById('utcTime').innerText = now.toUTCString().split(' ')[4] + ' UTC';
@@ -227,10 +228,18 @@ HTML_TEMPLATE = """
         updateUtcClock();
 
         function openConfigModal() {
+            // Pre-fill inputs with active values before opening
+            document.getElementById('cfgSymbol').value = document.getElementById('lblSymbol').innerText;
+            document.getElementById('cfgStrategy').value = document.getElementById('lblStrategy').innerText;
+            document.getElementById('cfgTimeframe').value = document.getElementById('lblTf').innerText;
+            document.getElementById('cfgLotSize').value = document.getElementById('lblLot').innerText;
+            
+            isModalEditing = true;
             document.getElementById('configModal').style.display = 'flex';
         }
 
         function closeConfigModal() {
+            isModalEditing = false;
             document.getElementById('configModal').style.display = 'none';
         }
 
@@ -266,7 +275,9 @@ HTML_TEMPLATE = """
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(payload)
-            }).then(res => res.json()).then(data => {
+            })
+            .then(res => res.json())
+            .then(data => {
                 updateUI(data.bridge, data.heartbeat);
             });
         }
@@ -280,40 +291,43 @@ HTML_TEMPLATE = """
         }
 
         function updateUI(bridge, hb) {
+            if(!bridge) return;
+
             document.getElementById('lblCommand').innerText = bridge.command;
             document.getElementById('lblSymbol').innerText = bridge.symbol;
             document.getElementById('lblStrategy').innerText = bridge.strategy;
             document.getElementById('lblTf').innerText = bridge.timeframe;
             document.getElementById('lblLot').innerText = bridge.lotSize;
-            
-            const cfgStrat = document.getElementById('cfgStrategy');
-            if(cfgStrat.value !== bridge.strategy) {
-                cfgStrat.value = bridge.strategy;
-            }
 
-            document.getElementById('lblExec').innerText = hb.lastExecuted || 'None';
+            if (hb) {
+                document.getElementById('lblExec').innerText = hb.lastExecuted || (bridge.command + ' ACTIVE');
+                
+                const badge = document.getElementById('connectionBadge');
+                if(hb.lastSeen && hb.lastSeen !== 'Never') {
+                    badge.className = 'status-badge';
+                    badge.innerText = 'ONLINE';
+                } else {
+                    badge.className = 'status-badge status-offline';
+                    badge.innerText = 'OFFLINE';
+                }
+            }
 
             const circle = document.getElementById('runCircle');
             const playIcon = document.getElementById('playIcon');
             const runText = document.getElementById('runText');
             
-            if(bridge.command === 'PLAY') {
+            if(bridge.command === 'PLAY' || bridge.command === 'RUNNING') {
                 circle.className = 'run-circle';
                 playIcon.innerHTML = '&#9658;';
                 runText.innerText = 'RUNNING';
-            } else {
+            } else if(bridge.command === 'PAUSE' || bridge.command === 'PAUSED') {
                 circle.className = 'run-circle paused';
                 playIcon.innerHTML = '&#10074;&#10074;';
                 runText.innerText = 'PAUSED';
-            }
-
-            const badge = document.getElementById('connectionBadge');
-            if(hb.lastSeen !== 'Never') {
-                badge.className = 'status-badge';
-                badge.innerText = 'ONLINE';
             } else {
-                badge.className = 'status-badge status-offline';
-                badge.innerText = 'OFFLINE';
+                circle.className = 'run-circle';
+                playIcon.innerHTML = '&#9658;';
+                runText.innerText = bridge.command;
             }
         }
 
@@ -330,30 +344,46 @@ def index():
   return render_template_string(HTML_TEMPLATE, strategies=SUPPORTED_STRATEGIES)
 
 
+# EA Polling Endpoint: Returns direct flat JSON object so MT5/cTrader EA reads parameters at root
 @app.route("/api/bridge/command", methods=["GET"])
 def get_command():
-  return jsonify({"bridge": bridge_state, "heartbeat": ea_heartbeat})
+  return jsonify(bridge_state)
 
 
 @app.route("/api/bridge/command", methods=["POST"])
 def post_command():
   global bridge_state
-  data = request.get_json() or {}
-  for key in bridge_state:
-    if key in data:
+  data = request.get_json(force=True, silent=True) or {}
+  for key in ["symbol", "strategy", "timeframe", "lotSize", "maxTrades", "command"]:
+    if key in data and data[key] is not None:
       bridge_state[key] = data[key]
-  return jsonify({"bridge": bridge_state, "heartbeat": ea_heartbeat})
+  return jsonify(
+      {"status": "success", "bridge": bridge_state, "heartbeat": ea_heartbeat}
+  )
 
 
 @app.route("/api/bridge/heartbeat", methods=["POST"])
 def post_heartbeat():
-  global ea_heartbeat
-  data = request.get_json() or {}
-  ea_heartbeat.update(data)
-  ea_heartbeat["lastSeen"] = datetime.now(timezone.utc).strftime("%H:%M:%S UTC")
-  return jsonify(
-      {"status": "success", "bridge": bridge_state, "heartbeat": ea_heartbeat}
-  )
+  global ea_heartbeat, bridge_state
+  data = request.get_json(force=True, silent=True) or {}
+  if data:
+    for k, v in data.items():
+      ea_heartbeat[k] = v
+    ea_heartbeat["lastSeen"] = datetime.now(timezone.utc).strftime(
+        "%H:%M:%S UTC"
+    )
+
+  return jsonify({
+      "status": "success",
+      "command": bridge_state["command"],
+      "strategy": bridge_state["strategy"],
+      "symbol": bridge_state["symbol"],
+      "timeframe": bridge_state["timeframe"],
+      "lotSize": bridge_state["lotSize"],
+      "maxTrades": bridge_state["maxTrades"],
+      "bridge": bridge_state,
+      "heartbeat": ea_heartbeat,
+  })
 
 
 @app.route("/api/status", methods=["GET"])
