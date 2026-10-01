@@ -4,7 +4,7 @@ import os
 
 app = Flask(__name__)
 
-# Bridge Configuration state (TP and SL completely removed)
+# Bridge Configuration state (TP, SL, and risk removed)
 bridge_state = {
     "symbol": "XAUUSD",
     "strategy": "PURE_EXECUTION",
@@ -44,7 +44,7 @@ SUPPORTED_STRATEGIES = [
     "ICHIMOKU_BREAKOUT",
 ]
 
-# Your exact original UI template
+# UI Template with strategy configured in the modal and displayed cleanly in the telemetry log
 HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
@@ -90,8 +90,6 @@ HTML_TEMPLATE = """
         .telemetry-label { color: #8892b0; }
         .telemetry-value { font-weight: bold; color: #00ff66; font-family: monospace; }
         
-        .strategy-select { background: #050805; border: 1px solid #1a2e20; color: #00ff66; padding: 4px 8px; border-radius: 6px; font-size: 12px; outline: none; max-width: 200px; }
-        
         .execution-status-box { margin-top: 15px; border: 1px solid #1a2e20; border-radius: 10px; padding: 12px; background: #050805; font-size: 11px; color: #6b7280; }
         .execution-status-text { margin-top: 4px; color: #00ff66; font-weight: bold; font-size: 12px; letter-spacing: 0.5px; }
 
@@ -101,7 +99,7 @@ HTML_TEMPLATE = """
 
         /* Configuration Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; }
-        .modal-content { background: #0c110e; border: 1px solid #00ff66; border-radius: 16px; padding: 25px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; }
+        .modal-content { background: #0c110e; border: 1px solid #00ff66; border-radius: 16px; padding: 25px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; max-height: 90vh; overflow-y: auto; }
         .modal-title { color: #00ff66; font-size: 16px; font-weight: bold; border-bottom: 1px solid #1a2e20; padding-bottom: 8px; }
         .form-group { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
         .form-group label { color: #8892b0; }
@@ -155,11 +153,7 @@ HTML_TEMPLATE = """
             </div>
             <div class="telemetry-row">
                 <span class="telemetry-label">Active Strategy:</span>
-                <select id="strategySelect" class="strategy-select" onchange="updateStrategy()">
-                    {% for strat in strategies %}
-                    <option value="{{ strat }}">{{ strat }}</option>
-                    {% endfor %}
-                </select>
+                <span id="lblStrategy" class="telemetry-value">PURE_EXECUTION</span>
             </div>
             <div class="telemetry-row">
                 <span class="telemetry-label">Timeframe:</span>
@@ -189,6 +183,14 @@ HTML_TEMPLATE = """
             <div class="form-group">
                 <label>Symbol:</label>
                 <input type="text" id="cfgSymbol" class="form-control" value="XAUUSD">
+            </div>
+            <div class="form-group">
+                <label>Strategy:</label>
+                <select id="cfgStrategy" class="form-control">
+                    {% for strat in strategies %}
+                    <option value="{{ strat }}">{{ strat }}</option>
+                    {% endfor %}
+                </select>
             </div>
             <div class="form-group">
                 <label>Timeframe:</label>
@@ -242,19 +244,16 @@ HTML_TEMPLATE = """
             sendPost({ command: action });
         }
 
-        function updateStrategy() {
-            const strat = document.getElementById('strategySelect').value;
-            sendPost({ strategy: strat });
-        }
-
         function saveConfig() {
             const sym = document.getElementById('cfgSymbol').value;
+            const strat = document.getElementById('cfgStrategy').value;
             const tf = document.getElementById('cfgTimeframe').value;
             const lot = parseFloat(document.getElementById('cfgLotSize').value);
             const maxT = parseInt(document.getElementById('cfgMaxTrades').value);
             
             sendPost({
                 symbol: sym,
+                strategy: strat,
                 timeframe: tf,
                 lotSize: lot,
                 maxTrades: maxT
@@ -283,12 +282,13 @@ HTML_TEMPLATE = """
         function updateUI(bridge, hb) {
             document.getElementById('lblCommand').innerText = bridge.command;
             document.getElementById('lblSymbol').innerText = bridge.symbol;
+            document.getElementById('lblStrategy').innerText = bridge.strategy;
             document.getElementById('lblTf').innerText = bridge.timeframe;
             document.getElementById('lblLot').innerText = bridge.lotSize;
             
-            const stratSelect = document.getElementById('strategySelect');
-            if(stratSelect.value !== bridge.strategy) {
-                stratSelect.value = bridge.strategy;
+            const cfgStrat = document.getElementById('cfgStrategy');
+            if(cfgStrat.value !== bridge.strategy) {
+                cfgStrat.value = bridge.strategy;
             }
 
             document.getElementById('lblExec').innerText = hb.lastExecuted || 'None';
