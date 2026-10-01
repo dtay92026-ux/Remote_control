@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, render_template, request
 import os
 
 app = Flask(__name__)
@@ -42,6 +42,12 @@ SUPPORTED_STRATEGIES = [
     "VWAP_BOUNCE",
     "ICHIMOKU_BREAKOUT",
 ]
+
+
+@app.route("/")
+def index():
+  # Serves your exact UI template file (index.html) without altering your design
+  return render_template("index.html", strategies=SUPPORTED_STRATEGIES)
 
 
 @app.route("/api/bridge/command", methods=["GET"])
