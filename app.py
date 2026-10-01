@@ -1,34 +1,49 @@
-from flask import Flask, jsonify, request, render_template_string
-import os
-import datetime
+from datetime import datetime, timezone
+from flask import Flask, jsonify, render_template_string, request
 
 app = Flask(__name__)
 
-# Bridge state shared between MT5 EA and Web Dashboard
+# Bridge Configuration state (TP and SL completely removed)
 bridge_state = {
-    "enabled": True,
-    "strategy": "PURE_EXECUTION",
     "symbol": "XAUUSD",
+    "strategy": "PURE_EXECUTION",
     "timeframe": "M5",
-    "command": "NONE",
     "lotSize": 0.01,
-    "riskPerTrade": "$125.00",
     "maxTrades": 2,
-    "lastHeartbeat": "Never",
+    "command": "PLAY",
+}
+
+ea_heartbeat = {
+    "pair": "DTAY89",
+    "symbol": "XAUUSD",
+    "strategy": "PURE_EXECUTION",
+    "enabled": True,
     "lastExecuted": "PLAY ACTIVE",
-    "isOnline": False
+    "lastSeen": "Never",
 }
 
 # All 17 Professional Strategies
 SUPPORTED_STRATEGIES = [
-    "PURE_EXECUTION", "TREND_BREAKOUT", "RANGE_REVERSAL", "SUPPORT_RESISTANCE",
-    "EMA_CROSSOVER", "RSI_EXTREME", "MACD_MOMENTUM", "ATR_BREAKOUT",
-    "BOLLINGER_BOUNCE", "STOCHASTIC_EXTREME", "PARABOLIC_SAR", "CCI_EXTREME",
-    "WILLIAMS_R", "MOMENTUM_OSCILLATOR", "SUPER_TREND", "VWAP_BOUNCE", "ICHIMOKU_BREAKOUT"
+    "PURE_EXECUTION",
+    "TREND_BREAKOUT",
+    "RANGE_REVERSAL",
+    "SUPPORT_RESISTANCE",
+    "EMA_CROSSOVER",
+    "RSI_EXTREME",
+    "MACD_MOMENTUM",
+    "ATR_BREAKOUT",
+    "BOLLINGER_BOUNCE",
+    "STOCHASTIC_EXTREME",
+    "PARABOLIC_SAR",
+    "CCI_EXTREME",
+    "WILLIAMS_R",
+    "MOMENTUM_OSCILLATOR",
+    "SUPER_TREND",
+    "VWAP_BOUNCE",
+    "ICHIMOKU_BREAKOUT",
 ]
 
-# Exact D'TAY89 Neural UI Template Matching Your Design
-HTML_TEMPLATE = '''
+HTML_TEMPLATE = """
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -73,14 +88,26 @@ HTML_TEMPLATE = '''
         .telemetry-label { color: #8892b0; }
         .telemetry-value { font-weight: bold; color: #00ff66; font-family: monospace; }
         
-        .strategy-select { background: #050805; border: 1px solid #1a2e20; color: #00ff66; padding: 4px 8px; border-radius: 6px; font-size: 12px; outline: none; }
+        .strategy-select { background: #050805; border: 1px solid #1a2e20; color: #00ff66; padding: 4px 8px; border-radius: 6px; font-size: 12px; outline: none; max-width: 200px; }
         
         .execution-status-box { margin-top: 15px; border: 1px solid #1a2e20; border-radius: 10px; padding: 12px; background: #050805; font-size: 11px; color: #6b7280; }
         .execution-status-text { margin-top: 4px; color: #00ff66; font-weight: bold; font-size: 12px; letter-spacing: 0.5px; }
 
-        /* Floating Add Button */
+        /* Floating Add Button (+) */
         .fab-container { display: flex; justify-content: center; margin-top: 10px; }
         .fab-btn { width: 44px; height: 44px; border-radius: 50%; background: #0b2214; border: 1px solid #00ff66; color: #00ff66; font-size: 20px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 0 15px rgba(0, 255, 102, 0.3); }
+
+        /* Configuration Modal */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; }
+        .modal-content { background: #0c110e; border: 1px solid #00ff66; border-radius: 16px; padding: 25px; width: 90%; max-width: 400px; display: flex; flex-direction: column; gap: 15px; }
+        .modal-title { color: #00ff66; font-size: 16px; font-weight: bold; border-bottom: 1px solid #1a2e20; padding-bottom: 8px; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+        .form-group label { color: #8892b0; }
+        .form-control { background: #050805; border: 1px solid #1a2e20; color: #00ff66; padding: 10px; border-radius: 8px; font-size: 14px; outline: none; }
+        .modal-buttons { display: flex; gap: 10px; margin-top: 10px; }
+        .btn-modal { flex: 1; padding: 12px; border-radius: 8px; font-weight: bold; cursor: pointer; border: none; }
+        .btn-save { background: #0b2214; border: 1px solid #00ff66; color: #00ff66; }
+        .btn-close { background: #220b0b; border: 1px solid #ff3333; color: #ff3333; }
     </style>
 </head>
 <body>
@@ -101,10 +128,10 @@ HTML_TEMPLATE = '''
 
         <!-- Force Buy / Sell -->
         <div class="action-buttons">
-            <button class="btn-action btn-force-buy" onclick="sendControl('MANUAL_BUY')">
+            <button class="btn-action btn-force-buy" onclick="sendAction('MANUAL_BUY')">
                 FORCE BUY <span class="dot dot-green"></span>
             </button>
-            <button class="btn-action btn-force-sell" onclick="sendControl('MANUAL_SELL')">
+            <button class="btn-action btn-force-sell" onclick="sendAction('MANUAL_SELL')">
                 FORCE SELL <span class="dot dot-red"></span>
             </button>
         </div>
@@ -128,7 +155,7 @@ HTML_TEMPLATE = '''
                 <span class="telemetry-label">Active Strategy:</span>
                 <select id="strategySelect" class="strategy-select" onchange="updateStrategy()">
                     {% for strat in strategies %}
-                    <option value="{{ strat }}" {% if strat == state.strategy %}selected{% endif %}>{{ strat }}</option>
+                    <option value="{{ strat }}">{{ strat }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -137,8 +164,8 @@ HTML_TEMPLATE = '''
                 <span id="lblTf" class="telemetry-value">M5</span>
             </div>
             <div class="telemetry-row">
-                <span class="telemetry-label">Risk per Trade:</span>
-                <span id="lblRisk" class="telemetry-value">$125.00</span>
+                <span class="telemetry-label">Lot Size:</span>
+                <span id="lblLot" class="telemetry-value">0.01</span>
             </div>
 
             <div class="execution-status-box">
@@ -147,9 +174,43 @@ HTML_TEMPLATE = '''
             </div>
         </div>
 
-        <!-- Floating Action Button -->
+        <!-- Floating Action Button (+) Opens Config Settings -->
         <div class="fab-container">
-            <div class="fab-btn" onclick="alert('Strategy Config Active')">+</div>
+            <div class="fab-btn" onclick="openConfigModal()">+</div>
+        </div>
+    </div>
+
+    <!-- Configuration Settings Modal -->
+    <div id="configModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-title">⚙ Configuration Settings</div>
+            <div class="form-group">
+                <label>Symbol:</label>
+                <input type="text" id="cfgSymbol" class="form-control" value="XAUUSD">
+            </div>
+            <div class="form-group">
+                <label>Timeframe:</label>
+                <select id="cfgTimeframe" class="form-control">
+                    <option value="M1">M1</option>
+                    <option value="M5">M5</option>
+                    <option value="M15">M15</option>
+                    <option value="H1">H1</option>
+                    <option value="H4">H4</option>
+                    <option value="D1">D1</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Lot Size:</label>
+                <input type="number" step="0.01" id="cfgLotSize" class="form-control" value="0.01">
+            </div>
+            <div class="form-group">
+                <label>Max Simultaneous Trades:</label>
+                <input type="number" id="cfgMaxTrades" class="form-control" value="2">
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-modal btn-close" onclick="closeConfigModal()">Cancel</button>
+                <button class="btn-modal btn-save" onclick="saveConfig()">Save Settings</button>
+            </div>
         </div>
     </div>
 
@@ -161,68 +222,97 @@ HTML_TEMPLATE = '''
         setInterval(updateUtcClock, 1000);
         updateUtcClock();
 
-        function togglePlayPause() {
-            const isRunning = document.getElementById('runText').innerText === 'RUNNING';
-            const action = isRunning ? 'PAUSE' : 'PLAY';
-            sendControl(action);
+        function openConfigModal() {
+            document.getElementById('configModal').style.display = 'flex';
         }
 
-        function sendControl(action) {
-            fetch('/api/control', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({action: action})
-            }).then(res => res.json()).then(data => {
-                fetchStatus();
-            });
+        function closeConfigModal() {
+            document.getElementById('configModal').style.display = 'none';
+        }
+
+        function togglePlayPause() {
+            const currentCmd = document.getElementById('lblCommand').innerText;
+            const newCmd = (currentCmd === 'PLAY' || currentCmd === 'RUNNING') ? 'PAUSE' : 'PLAY';
+            sendPost({ command: newCmd });
+        }
+
+        function sendAction(action) {
+            sendPost({ command: action });
         }
 
         function updateStrategy() {
             const strat = document.getElementById('strategySelect').value;
-            fetch('/api/set_strategy', {
+            sendPost({ strategy: strat });
+        }
+
+        function saveConfig() {
+            const sym = document.getElementById('cfgSymbol').value;
+            const tf = document.getElementById('cfgTimeframe').value;
+            const lot = parseFloat(document.getElementById('cfgLotSize').value);
+            const maxT = parseInt(document.getElementById('cfgMaxTrades').value);
+            
+            sendPost({
+                symbol: sym,
+                timeframe: tf,
+                lotSize: lot,
+                maxTrades: maxT
+            });
+            closeConfigModal();
+        }
+
+        function sendPost(payload) {
+            fetch('/api/bridge/command', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({strategy: strat})
-            }).then(res => res.json()).then(data => console.log('Strategy updated'));
+                body: JSON.stringify(payload)
+            }).then(res => res.json()).then(data => {
+                updateUI(data.bridge, data.heartbeat);
+            });
         }
 
         function fetchStatus() {
             fetch('/api/status')
                 .then(res => res.json())
                 .then(data => {
-                    document.getElementById('lblCommand').innerText = data.command !== 'NONE' ? data.command : (data.enabled ? 'PLAY' : 'PAUSED');
-                    document.getElementById('lblSymbol').innerText = data.symbol;
-                    document.getElementById('lblTf').innerText = data.timeframe;
-                    document.getElementById('lblRisk').innerText = data.riskPerTrade || '$125.00';
-                    document.getElementById('lblExec').innerText = data.lastExecuted;
-                    
-                    if(document.getElementById('strategySelect').value !== data.strategy) {
-                        document.getElementById('strategySelect').value = data.strategy;
-                    }
-
-                    const circle = document.getElementById('runCircle');
-                    const playIcon = document.getElementById('playIcon');
-                    const runText = document.getElementById('runText');
-                    
-                    if(data.enabled) {
-                        circle.className = 'run-circle';
-                        playIcon.innerText = '▶';
-                        runText.innerText = 'RUNNING';
-                    } else {
-                        circle.className = 'run-circle paused';
-                        playIcon.innerText = '⏸';
-                        runText.innerText = 'PAUSED';
-                    }
-
-                    const badge = document.getElementById('connectionBadge');
-                    if(data.isOnline) {
-                        badge.className = 'status-badge';
-                        badge.innerText = 'ONLINE';
-                    } else {
-                        badge.className = 'status-badge status-offline';
-                        badge.innerText = 'OFFLINE';
-                    }
+                    updateUI(data.bridge, data.heartbeat);
                 });
+        }
+
+        function updateUI(bridge, hb) {
+            document.getElementById('lblCommand').innerText = bridge.command;
+            document.getElementById('lblSymbol').innerText = bridge.symbol;
+            document.getElementById('lblTf').innerText = bridge.timeframe;
+            document.getElementById('lblLot').innerText = bridge.lotSize;
+            
+            const stratSelect = document.getElementById('strategySelect');
+            if(stratSelect.value !== bridge.strategy) {
+                stratSelect.value = bridge.strategy;
+            }
+
+            document.getElementById('lblExec').innerText = hb.lastExecuted || 'None';
+
+            const circle = document.getElementById('runCircle');
+            const playIcon = document.getElementById('playIcon');
+            const runText = document.getElementById('runText');
+            
+            if(bridge.command === 'PLAY') {
+                circle.className = 'run-circle';
+                playIcon.innerText = '▶';
+                runText.innerText = 'RUNNING';
+            } else {
+                circle.className = 'run-circle paused';
+                playIcon.innerText = '⏸';
+                runText.innerText = 'PAUSED';
+            }
+
+            const badge = document.getElementById('connectionBadge');
+            if(hb.lastSeen !== 'Never') {
+                badge.className = 'status-badge';
+                badge.innerText = 'ONLINE';
+            } else {
+                badge.className = 'status-badge status-offline';
+                badge.innerText = 'OFFLINE';
+            }
         }
 
         setInterval(fetchStatus, 3000);
@@ -230,82 +320,49 @@ HTML_TEMPLATE = '''
     </script>
 </body>
 </html>
-'''
+"""
 
-@app.route('/')
+
+@app.route("/")
 def index():
-    return render_template_string(HTML_TEMPLATE, strategies=SUPPORTED_STRATEGIES, state=bridge_state)
+  return render_template_string(HTML_TEMPLATE, strategies=SUPPORTED_STRATEGIES)
 
-@app.route('/api/bridge/command', methods=['GET'])
+
+@app.route("/api/bridge/command", methods=["GET"])
 def get_command():
-    cmd = bridge_state["command"]
-    bridge_state["command"] = "NONE"
-    return jsonify({
-        "enabled": bridge_state["enabled"],
-        "strategy": bridge_state["strategy"],
-        "symbol": bridge_state["symbol"],
-        "timeframe": bridge_state["timeframe"],
-        "command": cmd,
-        "lotSize": bridge_state["lotSize"],
-        "maxTrades": bridge_state["maxTrades"]
-    })
+  return jsonify({"bridge": bridge_state, "heartbeat": ea_heartbeat})
 
-@app.route('/api/bridge/heartbeat', methods=['POST'])
-def receive_heartbeat():
-    data = request.json or {}
-    bridge_state["enabled"] = data.get("enabled", bridge_state["enabled"])
-    bridge_state["symbol"] = data.get("symbol", bridge_state["symbol"])
-    bridge_state["strategy"] = data.get("strategy", bridge_state["strategy"])
-    bridge_state["lastExecuted"] = data.get("lastExecuted", "PLAY ACTIVE")
-    bridge_state["lastHeartbeat"] = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    return jsonify({"status": "received"})
 
-@app.route('/api/set_strategy', methods=['POST'])
-def set_strategy():
-    data = request.json or {}
-    strat = data.get("strategy")
-    if strat in SUPPORTED_STRATEGIES:
-        bridge_state["strategy"] = strat
-        return jsonify({"success": True, "strategy": strat})
-    return jsonify({"success": False, "error": "Invalid strategy"}), 400
+@app.route("/api/bridge/command", methods=["POST"])
+def post_command():
+  global bridge_state
+  data = request.get_json()
+  if data:
+    for key in bridge_state:
+      if key in data:
+        bridge_state[key] = data[key]
+  return jsonify({"bridge": bridge_state, "heartbeat": ea_heartbeat})
 
-@app.route('/api/control', methods=['POST'])
-def control_ea():
-    data = request.json or {}
-    action = data.get("action")
-    if action in ["PLAY", "PAUSE", "MANUAL_BUY", "MANUAL_SELL"]:
-        bridge_state["command"] = action
-        if action == "PLAY":
-            bridge_state["enabled"] = True
-            bridge_state["lastExecuted"] = "PLAY ACTIVE"
-        elif action == "PAUSE":
-            bridge_state["enabled"] = False
-            bridge_state["lastExecuted"] = "PAUSED BY USER"
-        elif action == "MANUAL_BUY":
-            bridge_state["lastExecuted"] = "FORCE BUY EXECUTED"
-        elif action == "MANUAL_SELL":
-            bridge_state["lastExecuted"] = "FORCE SELL EXECUTED"
-        return jsonify({"success": True, "action": action})
-    return jsonify({"success": False, "error": "Invalid action"}), 400
 
-@app.route('/api/status', methods=['GET'])
+@app.route("/api/bridge/heartbeat", methods=["POST"])
+def post_heartbeat():
+  global ea_heartbeat
+  data = request.get_json()
+  if data:
+    ea_heartbeat.update(data)
+    ea_heartbeat["lastSeen"] = datetime.now(timezone.utc).strftime(
+        "%H:%M:%S UTC"
+    )
+  return jsonify(
+      {"status": "success", "bridge": bridge_state, "heartbeat": ea_heartbeat}
+  )
+
+
+@app.route("/api/status", methods=["GET"])
 def get_status():
-    is_online = False
-    if bridge_state["lastHeartbeat"] != "Never":
-        try:
-            last_hb_time = datetime.datetime.strptime(bridge_state["lastHeartbeat"], "%Y-%m-%d %H:%M:%S")
-            diff = (datetime.datetime.now() - last_hb_time).total_seconds()
-            if diff < 15:
-                is_online = True
-        except:
-            pass
+  return jsonify({"bridge": bridge_state, "heartbeat": ea_heartbeat})
 
-    return jsonify({
-        **bridge_state,
-        "isOnline": is_online,
-        "available_strategies": SUPPORTED_STRATEGIES
-    })
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+if __name__ == "__main__":
+  port = int(os.environ.get("PORT", 5000))
+  app.run(host="0.0.0.0", port=port)
